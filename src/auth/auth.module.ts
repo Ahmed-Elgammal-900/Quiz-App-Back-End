@@ -9,15 +9,16 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtRefreshStrategy } from './jwtRefersh.strategy';
 import { JwtStrategy } from './jwt.strategy';
 import { GoogleStrategy } from './googleAuth.strategy';
-import { LocalStrategy } from './localAuth.strategy';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, DeletedUser]),
     PassportModule,
     JwtModule.register({}),
+    MailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtRefreshStrategy, JwtStrategy, GoogleStrategy, LocalStrategy],
+  providers: [AuthService, JwtRefreshStrategy, JwtStrategy, GoogleStrategy],
 })
 export class AuthModule {}

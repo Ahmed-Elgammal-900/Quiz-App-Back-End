@@ -10,7 +10,7 @@ export class User {
   @Column()
   email: string;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   password: string;
 
   @Column({ nullable: true })
@@ -18,4 +18,10 @@ export class User {
 
   @Column({ default: 'local' })
   provider: string;
+
+  @Column({ nullable: true, type: 'varchar' })
+  passwordResetToken: string | null;
+
+  @Column({ nullable: true, type: 'timestamp' })
+  passwordResetExpires: Date | null;
 }
