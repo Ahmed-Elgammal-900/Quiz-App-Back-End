@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { AuthModule } from './auth/auth.module';
-import { Database } from './db/db-connectiont';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { MailModule } from './mail/mail.module';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { AuthModule } from './modules/auth/auth.module';
+import { Database } from './config/db-connectiont';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { MailModule } from './modules/mail/mail.module';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { UserModule } from './modules/user/user.module';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { TransformInterceptor } from './common/interceptors/transform-response.interceptor';
 
 @Module({
   imports: [
@@ -17,13 +21,16 @@ import { MailModule } from './mail/mail.module';
     }),
     AuthModule,
     Database,
-    MailModule
+    MailModule,
+    UserModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: JwtAuthGuard,
     },
+    { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
   ],
 })
 export class AppModule {}
