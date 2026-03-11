@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { Get, Delete, Res } from '@nestjs/common';
+import { Delete, Res } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/user.decorator';
