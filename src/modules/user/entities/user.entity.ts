@@ -10,7 +10,7 @@ export class User {
   @Column()
   name: string;
 
-  @Column()
+  @Column({ unique: true })
   email: string;
 
   @Column({ nullable: true })
@@ -21,7 +21,6 @@ export class User {
 
   @Column({
     type: 'simple-array',
-    enum: Provider,
     default: Provider.LOCAL,
   })
   providers: Provider[];
