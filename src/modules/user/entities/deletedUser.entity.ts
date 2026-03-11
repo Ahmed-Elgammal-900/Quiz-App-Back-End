@@ -10,7 +10,7 @@ export class DeletedUser {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, unique: true })
   email: string;
 
   @CreateDateColumn()

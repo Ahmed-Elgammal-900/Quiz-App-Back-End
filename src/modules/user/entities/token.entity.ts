@@ -26,9 +26,6 @@ export class Token {
   @Column()
   expiresAt: Date;
 
-  @Column({ default: false })
-  isUsed: boolean;
-
   @Column({ default: 0 })
   attempts: number;
 

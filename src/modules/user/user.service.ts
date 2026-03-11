@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { DeletedUser } from './entities/deletedUser.entity';
@@ -23,7 +23,7 @@ export class UserService {
   ) {}
 
   /**
-   * create new user into database
+   * Create new user into database
    * @param createAuthDto - The data transfer object containing user creation data
    * @returns A promise with new user type based on exosed fields
    */
@@ -86,11 +86,6 @@ export class UserService {
   }) {
     const { name, email, googleId } = profile;
 
-    const deleted = await this.findDeletedByEmail(email);
-    if (deleted) {
-      throw new BadRequestException('this account was deleted');
-    }
-
     let user = await this.userRepository.findOne({
       where: { googleId: googleId },
     });
@@ -99,7 +94,9 @@ export class UserService {
     user = await this.findOne({ email });
     if (user) {
       user.googleId = googleId;
-      user.providers = [...user.providers, Provider.GOOGLE];
+      if (!user.providers.includes(Provider.GOOGLE)) {
+        user.providers = [...user.providers, Provider.GOOGLE];
+      }
       return await this.userRepository.save(user);
     }
 
@@ -119,17 +116,17 @@ export class UserService {
    * @returns message if deletin success
    */
   async deleteUser(user: { id: string; email: string }) {
-    const deletedEmail = this.deletedUserRepository.create({
-      email: user.email,
-    });
-
-    await this.deletedUserRepository.save(deletedEmail);
-
     const result = await this.userRepository.delete(user.id);
 
     if (result.affected === 0) {
       throw new NotFoundException('User not found');
     }
+
+    const deletedEmail = this.deletedUserRepository.create({
+      email: user.email,
+    });
+
+    await this.deletedUserRepository.save(deletedEmail);
 
     return { message: 'Account deleted successfully' };
   }
@@ -168,7 +165,6 @@ export class UserService {
       token: hashedToken,
       type,
       expiresAt,
-      isUsed: false,
       attempts: 0,
       lastSentAt: new Date(),
     });
@@ -213,12 +209,8 @@ export class UserService {
    * @param userId - ID of the user
    * @returns void
    */
-  async incrementAttempts(userId: string) {
-    await this.tokenRepository.increment(
-      { userId, type: TokenType.EMAIL_VERIFY },
-      'attempts',
-      1,
-    );
+  async incrementAttempts(userId: string, type = TokenType.EMAIL_VERIFY) {
+    await this.tokenRepository.increment({ userId, type }, 'attempts', 1);
   }
 
   /**
