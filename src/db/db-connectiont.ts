@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from 'src/auth/entities/user.entity';
-import { DeletedUser } from 'src/auth/entities/deletedUser.entity';
+import { User } from 'src/modules/user/entities/user.entity';
+import { DeletedUser } from 'src/modules/user/entities/deletedUser.entity';
+import { Token } from 'src/modules/user/entities/token.entity';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { DeletedUser } from 'src/auth/entities/deletedUser.entity';
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         url: configService.get<string>('DATABASE_URL'),
-        entities: [User, DeletedUser],
+        entities: [User, DeletedUser, Token],
         synchronize: false,
         ssl: {
           rejectUnauthorized: false,
