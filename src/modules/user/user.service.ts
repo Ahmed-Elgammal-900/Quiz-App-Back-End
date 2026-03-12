@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { DeletedUser } from './entities/deletedUser.entity';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsWhere, Repository, DataSource } from 'typeorm';
 import { CreateAuthDto } from '../auth/dto/signup.dto';
 import {
   ConflictException,
@@ -24,6 +24,7 @@ export class UserService {
     private tokenRepository: Repository<Token>,
     @InjectRepository(DeletedUser)
     private deletedUserRepository: Repository<DeletedUser>,
+    private dataSource: DataSource,
   ) {}
 
   /**
@@ -117,21 +118,17 @@ export class UserService {
   /**
    * Delete user from user entity
    * @param user user from jwt guard
-   * @returns message if deletin success
+   * @returns message if deleti success
    */
   async deleteUser(user: { id: string; email: string }) {
-    const result = await this.userRepository.delete(user.id);
-
-    if (result.affected === 0) {
-      throw new NotFoundException('User not found');
-    }
-
-    const deletedEmail = this.deletedUserRepository.create({
-      email: user.email,
+    await this.dataSource.transaction(async (manager) => {
+      const result = await manager.delete(User, user.id);
+      if (result.affected === 0) {
+        throw new NotFoundException('User not found');
+      }
+      const deletedEmail = manager.create(DeletedUser, { email: user.email });
+      await manager.save(deletedEmail);
     });
-
-    await this.deletedUserRepository.save(deletedEmail);
-
     return { message: 'Account deleted successfully' };
   }
 
