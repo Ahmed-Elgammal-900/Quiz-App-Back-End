@@ -14,10 +14,14 @@ import * as crypto from 'crypto';
 import { MailService } from 'src/modules/mail/mail.service';
 import { UserService } from '../user/user.service';
 import { UpdatePasswordDto } from './dto/change-password.dto';
-import { HASH_SALT_ROUNDS } from './constants/auth.constants';
+import {
+  ACCESS_TOKEN_TIME,
+  HASH_SALT_ROUNDS,
+  REFRESH_TOKEN_TIME,
+} from './constants/auth.constants';
 import { TokenType } from './constants/token-type.constant';
 import { UnauthorizedException } from '@nestjs/common';
-import { UserResponse } from './types/respnse-types';
+import { UserResponse } from './types/response-types';
 
 @Injectable()
 export class AuthService {
@@ -35,7 +39,7 @@ export class AuthService {
    */
   async createUser(createAuthDto: CreateAuthDto) {
     const user = await this.userService.createUser(createAuthDto);
-    this.sendOtp(user.id, user.email);
+    await this.sendOtp(user.id, user.email);
     return user;
   }
 
@@ -58,7 +62,7 @@ export class AuthService {
     const user = await this.userService.findOrCreateGoogleUser(googleDto);
 
     if (!user.isEmailVerified) {
-      this.sendOtp(user.id, user.email);
+      await this.sendOtp(user.id, user.email);
     }
 
     return {
@@ -97,7 +101,7 @@ export class AuthService {
     }
 
     if (!user.isEmailVerified) {
-      this.sendOtp(user.id, user.email);
+      await this.sendOtp(user.id, user.email);
     }
 
     return user;
@@ -174,8 +178,13 @@ export class AuthService {
     );
     if (isSame) throw new BadRequestException('New password must be different');
 
+    const hashedPassword = bcrypt.hash(
+      updatePasswordDto.newPassword,
+      HASH_SALT_ROUNDS,
+    );
+
     await this.userService.updateUser(id, {
-      password: updatePasswordDto.newPassword,
+      password: hashedPassword,
     });
   }
 
@@ -343,12 +352,12 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get('JWT_ACCESS_SECRET'),
-      expiresIn: '15m',
+      expiresIn: ACCESS_TOKEN_TIME,
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get('JWT_REFRESH_SECRET'),
-      expiresIn: '7d',
+      expiresIn: REFRESH_TOKEN_TIME,
     });
 
     const hashedRefresh = crypto
@@ -376,7 +385,7 @@ export class AuthService {
    * @returns A new accessToken and refreshToken pair
    * @throws {UnauthorizedException} If the user is not found
    */
-  async updateAccessToken(userId: string, oldRefreshToken: string) {
+  async refreshTokens(userId: string, oldRefreshToken: string) {
     const user = await this.userService.findOne({ id: userId });
     if (!user) throw new UnauthorizedException();
 

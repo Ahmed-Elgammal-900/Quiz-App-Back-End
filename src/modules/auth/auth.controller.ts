@@ -12,9 +12,9 @@ import { CreateAuthDto } from './dto/signup.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 import { LoginDto } from './dto/login.dto';
-import { UpdateAuthDto } from './dto/forget-password.dto';
+import { ForgetPasswordDto } from './dto/forget-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { UserResponse } from './types/respnse-types';
+import { JwtUserWithRefresh, UserResponse } from './types/response-types';
 import { Public } from 'src/common/decorators/public.decorator';
 import { ConfigService } from '@nestjs/config';
 import { CurrentUser } from 'src/common/decorators/user.decorator';
@@ -69,7 +69,13 @@ export class AuthController {
 
       this.setTokenCookies(res, accessToken, refreshToken);
     }
-    return { message: 'login success', userId: user.id };
+    return {
+      message: user.isEmailVerified
+        ? 'login success'
+        : 'otp verification required',
+      userId: user.id,
+      isEmailVerified: user.isEmailVerified,
+    };
   }
 
   /**
@@ -106,7 +112,13 @@ export class AuthController {
       this.setTokenCookies(res, accessToken, refreshToken);
     }
 
-    return { message: 'google auth success', userId: user.id };
+    return {
+      message: user.isEmailVerified
+        ? 'google auth success'
+        : 'otp verification required',
+      userId: user.id,
+      isEmailVerified: user.isEmailVerified,
+    };
   }
 
   /**
@@ -121,20 +133,14 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt-refresh'))
   @Post('refresh-token')
   async refresh(
-    @CurrentUser() user: UserResponse,
+    @CurrentUser() user: JwtUserWithRefresh,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken } = await this.authService.updateAccessToken(
+    const { accessToken, refreshToken } = await this.authService.refreshTokens(
       user.id,
-      user.email,
+      user.refreshToken,
     );
-
-    res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure: this.configService.get('NODE_ENV') === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000,
-    });
+    this.setTokenCookies(res, accessToken, refreshToken);
 
     return { message: 'success access token' };
   }
@@ -148,14 +154,14 @@ export class AuthController {
    * @returns A success message
    */
   @Patch('change-password')
-  async changePaswword(
+  async changePassword(
     @CurrentUser() user: UserResponse,
     @Body() updatePasswordDto: UpdatePasswordDto,
     @Res({ passthrough: true }) _res: Response,
   ) {
     await this.authService.changePassword(user.id, updatePasswordDto);
 
-    return { massege: 'password changed successfully' };
+    return { message: 'password changed successfully' };
   }
 
   /**
@@ -169,7 +175,7 @@ export class AuthController {
   @Public()
   @Post('forget-password')
   async forgetPassword(
-    @Body() updateAuthDto: UpdateAuthDto,
+    @Body() updateAuthDto: ForgetPasswordDto,
     @Res({ passthrough: true }) _res: Response,
   ) {
     const message = await this.authService.forgotPassword(updateAuthDto.email);

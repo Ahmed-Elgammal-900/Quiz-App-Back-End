@@ -7,7 +7,7 @@ import { Request } from 'express';
 import { TokenType } from '../constants/token-type.constant';
 import * as crypto from 'crypto';
 import { UnauthorizedException } from '@nestjs/common';
-import { JwtPayload } from '../types/respnse-types';
+import { JwtPayload } from '../types/response-types';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(
@@ -35,7 +35,9 @@ export class JwtRefreshStrategy extends PassportStrategy(
 
   async validate(req: Request, payload: JwtPayload) {
     const refreshToken = req.cookies?.['refresh_token'];
-
+    if (!refreshToken)
+      throw new UnauthorizedException('Refresh token not found');
+    
     const hashedToken = crypto
       .createHash('sha256')
       .update(refreshToken)
@@ -55,6 +57,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
       id: payload.sub,
       email: payload.email,
       isEmailVerified: payload.isEmailVerified,
+      refreshToken,
     };
   }
 }
