@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   UseGuards,
-  Req,
   Res,
   Patch,
 } from '@nestjs/common';
@@ -21,6 +20,7 @@ import { ConfigService } from '@nestjs/config';
 import { CurrentUser } from 'src/common/decorators/user.decorator';
 import { VerifyOtpDto } from './dto/otp.dto';
 import { UpdatePasswordDto } from './dto/change-password.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -29,19 +29,33 @@ export class AuthController {
     private configService: ConfigService,
   ) {}
 
+  /**
+   * Registers a new user account and sends an OTP verification email.
+   * Does not issue tokens — user must verify email first.
+   *
+   * @route POST /auth/signup
+   * @access Public
+   * @returns A success message and the new user's ID
+   */
   @Public()
   @Post('signup')
   async create(
     @Body() createAuthDto: CreateAuthDto,
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) _res: Response,
   ) {
     const user = await this.authService.createUser(createAuthDto);
-    const { accessToken, refreshToken } =
-      await this.authService.generateTokens(user);
-    this.setTokenCookies(res, accessToken, refreshToken);
-    return { message: 'signup success', isEmalVerified: user.isEmailVerified };
+    return { message: 'signup success', userId: user.id };
   }
 
+  /**
+   * Authenticates a user with email and password.
+   * Issues access and refresh token cookies only if the email is verified.
+   * If not verified, a new OTP is sent automatically.
+   *
+   * @route POST /auth/login
+   * @access Public
+   * @returns A success message and the user's ID
+   */
   @Public()
   @Post('login')
   async login(
@@ -49,17 +63,36 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.validateLocalUser(loginDto);
-    const { accessToken, refreshToken } =
-      await this.authService.generateTokens(user);
-    this.setTokenCookies(res, accessToken, refreshToken);
-    return { message: 'login success', isEmalVerified: user.isEmailVerified };
+    if (user.isEmailVerified) {
+      const { accessToken, refreshToken } =
+        await this.authService.generateTokens(user);
+
+      this.setTokenCookies(res, accessToken, refreshToken);
+    }
+    return { message: 'login success', userId: user.id };
   }
 
+  /**
+   * Initiates the Google OAuth2 login flow.
+   * Redirects the user to Google's consent screen.
+   *
+   * @route GET /auth/google
+   * @access Public
+   */
   @Public()
   @UseGuards(AuthGuard('google'))
   @Get('google')
   googleLogin() {}
 
+  /**
+   * Handles the Google OAuth2 callback after user consent.
+   * Issues token cookies if the user's email is already verified.
+   * If not verified, an OTP is sent automatically.
+   *
+   * @route GET /auth/google/callback
+   * @access Public (Google OAuth guard)
+   * @returns A success message and the user's ID
+   */
   @Public()
   @UseGuards(AuthGuard('google'))
   @Get('google/callback')
@@ -67,12 +100,23 @@ export class AuthController {
     @CurrentUser() user: UserResponse,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken, refreshToken } =
-      await this.authService.generateTokens(user);
-    this.setTokenCookies(res, accessToken, refreshToken);
-    res.redirect(`${this.configService.get('ORIGIN')}/dashboard`);
+    if (user.isEmailVerified) {
+      const { accessToken, refreshToken } =
+        await this.authService.generateTokens(user);
+      this.setTokenCookies(res, accessToken, refreshToken);
+    }
+
+    return { message: 'google auth success', userId: user.id };
   }
 
+  /**
+   * Issues a new access token using a valid refresh token cookie.
+   * The old refresh token is invalidated (token rotation).
+   *
+   * @route POST /auth/refresh-token
+   * @access Public (jwt-refresh guard)
+   * @returns A success message
+   */
   @Public()
   @UseGuards(AuthGuard('jwt-refresh'))
   @Post('refresh-token')
@@ -95,28 +139,52 @@ export class AuthController {
     return { message: 'success access token' };
   }
 
+  /**
+   * Changes the password for the currently authenticated user.
+   * Requires the current password to be correct and the new one to be different.
+   *
+   * @route PATCH /auth/change-password
+   * @access Protected (jwt-access guard)
+   * @returns A success message
+   */
   @Patch('change-password')
   async changePaswword(
     @CurrentUser() user: UserResponse,
     @Body() updatePasswordDto: UpdatePasswordDto,
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) _res: Response,
   ) {
     await this.authService.changePassword(user.id, updatePasswordDto);
 
     return { massege: 'password changed successfully' };
   }
 
+  /**
+   * Sends a password reset link to the provided email address.
+   * Always returns the same response to prevent email enumeration.
+   *
+   * @route POST /auth/forget-password
+   * @access Public
+   * @returns A generic success message
+   */
   @Public()
   @Post('forget-password')
   async forgetPassword(
     @Body() updateAuthDto: UpdateAuthDto,
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) _res: Response,
   ) {
     const message = await this.authService.forgotPassword(updateAuthDto.email);
 
     return message;
   }
 
+  /**
+   * Resets the user's password using a valid reset token from their email.
+   * Issues new access and refresh token cookies on success.
+   *
+   * @route POST /auth/reset-password
+   * @access Public
+   * @returns A success message
+   */
   @Public()
   @Post('reset-password')
   async resetPassword(
@@ -133,16 +201,50 @@ export class AuthController {
     return { message: 'Password reset successful' };
   }
 
+  /**
+   * Verifies a user's email using the OTP sent during registration.
+   * Issues access and refresh token cookies on successful verification.
+   *
+   * @route POST /auth/verify-email
+   * @access Public
+   * @returns A success message
+   */
+  @Public()
   @Post('verify-email')
-  verifyEmail(@CurrentUser() user: UserResponse, @Body() dto: VerifyOtpDto) {
-    return this.authService.verifyOtp(user.id, dto.otp);
+  async verifyEmail(
+    @Body() dto: VerifyOtpDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = await this.authService.verifyOtp(dto.id, dto.otp);
+
+    const { accessToken, refreshToken } =
+      await this.authService.generateTokens(user);
+    this.setTokenCookies(res, accessToken, refreshToken);
+    return { message: 'email verified' };
   }
 
+  /**
+   * Resends the OTP to a user who hasn't verified their email yet.
+   * Subject to a 60-second cooldown between requests.
+   *
+   * @route POST /auth/resend-otp
+   * @access Public
+   * @returns A success message
+   */
+  @Public()
   @Post('resend-otp')
-  resendOtp(@CurrentUser() user: UserResponse) {
-    return this.authService.resendOtp(user.id);
+  resendOtp(@Body() dto: ResendOtpDto) {
+    return this.authService.resendOtp(dto.id);
   }
 
+  /**
+   * Logs out the authenticated user by revoking their refresh token
+   * and clearing both token cookies from the browser.
+   *
+   * @route POST /auth/logout
+   * @access Protected (jwt-access guard)
+   * @returns A success message
+   */
   @Post('logout')
   async logout(
     @CurrentUser() user: UserResponse,
@@ -155,6 +257,14 @@ export class AuthController {
     return { message: 'logout success' };
   }
 
+  /**
+   * Sets HttpOnly access and refresh token cookies on the response.
+   * Cookies are marked secure in production and use strict SameSite policy.
+   *
+   * @param res - The Express response object
+   * @param accessToken - The signed JWT access token (expires in 15 minutes)
+   * @param refreshToken - The signed JWT refresh token (expires in 7 days)
+   */
   private setTokenCookies(
     res: Response,
     accessToken: string,

@@ -7,6 +7,7 @@ import { Request } from 'express';
 import { TokenType } from '../constants/token-type.constant';
 import * as crypto from 'crypto';
 import { UnauthorizedException } from '@nestjs/common';
+import { JwtPayload } from '../types/respnse-types';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(
@@ -32,7 +33,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
     });
   }
 
-  async validate(req: Request, payload: { sub: string; email: string }) {
+  async validate(req: Request, payload: JwtPayload) {
     const refreshToken = req.cookies?.['refresh_token'];
 
     const hashedToken = crypto
@@ -50,6 +51,10 @@ export class JwtRefreshStrategy extends PassportStrategy(
     if (token.expiresAt < new Date())
       throw new UnauthorizedException('Refresh token expired');
 
-    return { id: payload.sub, email: payload.email };
+    return {
+      id: payload.sub,
+      email: payload.email,
+      isEmailVerified: payload.isEmailVerified,
+    };
   }
 }
