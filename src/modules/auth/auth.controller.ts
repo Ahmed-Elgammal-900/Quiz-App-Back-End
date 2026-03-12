@@ -205,10 +205,19 @@ export class AuthController {
       resetPasswordDto.password,
       resetPasswordDto.resetToken,
     );
-    const { accessToken, refreshToken } =
-      await this.authService.generateTokens(user);
-    this.setTokenCookies(res, accessToken, refreshToken);
-    return { message: 'Password reset successful' };
+    if (user.isEmailVerified) {
+      const { accessToken, refreshToken } =
+        await this.authService.generateTokens(user);
+      this.setTokenCookies(res, accessToken, refreshToken);
+    }
+
+    return {
+      message: user.isEmailVerified
+        ? 'Password reset successful'
+        : 'Password reset successful, please verify your email',
+      isEmailVerified: user.isEmailVerified,
+      userId: user.id,
+    };
   }
 
   /**
