@@ -169,7 +169,7 @@ export class UserService {
         lastSentAt: new Date(),
       },
       {
-        conflictPaths: ['userId', 'type'], // matches your @Index
+        conflictPaths: ['userId', 'type'],
         skipUpdateIfNoValuesChanged: true,
       },
     );
