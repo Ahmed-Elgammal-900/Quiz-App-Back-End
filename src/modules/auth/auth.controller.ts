@@ -284,6 +284,7 @@ export class AuthController {
       secure: this.configService.get('NODE_ENV') === 'production',
       sameSite: 'strict',
       maxAge: ACCESS_TOKEN_MAX_AGE,
+      path: '/',
     });
 
     res.cookie('refresh_token', refreshToken, {
@@ -291,6 +292,7 @@ export class AuthController {
       secure: this.configService.get('NODE_ENV') === 'production',
       sameSite: 'strict',
       maxAge: REFRESH_TOKEN_MAX_AGE,
+      path: '/',
     });
   }
 

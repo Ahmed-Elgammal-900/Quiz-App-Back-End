@@ -17,6 +17,7 @@ import { UpdatePasswordDto } from './dto/change-password.dto';
 import {
   ACCESS_TOKEN_TIME,
   HASH_SALT_ROUNDS,
+  OTP_EXPIRES_AT,
   REFRESH_TOKEN_TIME,
 } from './constants/auth.constants';
 import { TokenType } from './constants/token-type.constant';
@@ -194,7 +195,7 @@ export class AuthService {
    * @returns A 6-digit OTP string
    */
   private generateOtp(): string {
-    return crypto.randomInt(100000, 999999).toString();
+    return crypto.randomInt(100000, 1000000).toString();
   }
 
   /**
@@ -284,14 +285,20 @@ export class AuthService {
 
     const otp = this.generateOtp();
     const hashedOtp = await bcrypt.hash(otp, HASH_SALT_ROUNDS);
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     await this.userService.saveToken(
       userId,
       hashedOtp,
       TokenType.EMAIL_VERIFY,
-      expiresAt,
+      OTP_EXPIRES_AT,
     );
+
+    try {
+      await this.mailService.sendOtpEmail(email, otp);
+    } catch (err) {
+      await this.userService.clearToken(TokenType.EMAIL_VERIFY, userId);
+      throw err;
+    }
 
     await this.mailService.sendOtpEmail(email, otp);
 
