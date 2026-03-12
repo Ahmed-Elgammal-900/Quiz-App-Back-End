@@ -30,7 +30,7 @@ export class UserService {
   /**
    * Create new user into database
    * @param createAuthDto - The data transfer object containing user creation data
-   * @returns A promise with new user type based on exosed fields
+   * @returns A promise with new user type based on exposed fields
    */
   async createUser(createAuthDto: CreateAuthDto): Promise<UserResponseDto> {
     const { email, password, name } = createAuthDto;
@@ -118,7 +118,7 @@ export class UserService {
   /**
    * Delete user from user entity
    * @param user user from jwt guard
-   * @returns message if deleti success
+   * @returns message if deletion success
    */
   async deleteUser(user: { id: string; email: string }) {
     await this.dataSource.transaction(async (manager) => {
