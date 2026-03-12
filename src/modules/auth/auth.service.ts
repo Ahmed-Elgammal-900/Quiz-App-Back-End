@@ -91,13 +91,13 @@ export class AuthService {
     const user = await this.userService.findOne({ email });
 
     if (!user) {
-      throw new NotFoundException('User Not Found');
+      throw new BadRequestException('Invalid email or password');
     }
 
     const truePassword = await bcrypt.compare(password, user.password);
 
     if (!truePassword) {
-      throw new BadRequestException('Password Or Email Incorrect');
+      throw new BadRequestException('Invalid email or password');
     }
 
     if (!user.isEmailVerified) {
@@ -178,7 +178,7 @@ export class AuthService {
     );
     if (isSame) throw new BadRequestException('New password must be different');
 
-    const hashedPassword = bcrypt.hash(
+    const hashedPassword = await bcrypt.hash(
       updatePasswordDto.newPassword,
       HASH_SALT_ROUNDS,
     );
@@ -245,6 +245,10 @@ export class AuthService {
    */
   async resendOtp(userId: string) {
     const user = await this.userService.findOne({ id: userId });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
     if (user.isEmailVerified) {
       throw new BadRequestException('Email already verified');
@@ -378,10 +382,10 @@ export class AuthService {
 
   /**
    * Rotates the refresh token — invalidates the old one and issues a new token pair.
-   * Used by the refresh endpoint to maintain token rotation security.
+   * Token existence and expiry are validated upstream in the JWT refresh strategy.
    *
    * @param userId - The ID of the user requesting a token refresh
-   * @param oldRefreshToken - The current refresh token to invalidate
+   * @param oldRefreshToken - The raw refresh token to invalidate
    * @returns A new accessToken and refreshToken pair
    * @throws {UnauthorizedException} If the user is not found
    */
@@ -395,8 +399,6 @@ export class AuthService {
       .digest('hex');
     await this.userService.clearToken(TokenType.REFRESH, undefined, hashedOld);
 
-    const tokens = await this.generateTokens(user);
-
-    return tokens;
+    return await this.generateTokens(user);
   }
 }

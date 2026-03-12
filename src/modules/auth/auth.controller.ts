@@ -21,6 +21,10 @@ import { CurrentUser } from 'src/common/decorators/user.decorator';
 import { VerifyOtpDto } from './dto/otp.dto';
 import { UpdatePasswordDto } from './dto/change-password.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
+import {
+  ACCESS_TOKEN_MAX_AGE,
+  REFRESH_TOKEN_MAX_AGE,
+} from './constants/auth.constants';
 
 @Controller('auth')
 export class AuthController {
@@ -122,8 +126,8 @@ export class AuthController {
   }
 
   /**
-   * Issues a new access token using a valid refresh token cookie.
-   * The old refresh token is invalidated (token rotation).
+   * Rotates both access and refresh tokens using a valid refresh token cookie.
+   * The old refresh token is invalidated and replaced with a new one (token rotation).
    *
    * @route POST /auth/refresh-token
    * @access Public (jwt-refresh guard)
@@ -239,8 +243,8 @@ export class AuthController {
    */
   @Public()
   @Post('resend-otp')
-  resendOtp(@Body() dto: ResendOtpDto) {
-    return this.authService.resendOtp(dto.id);
+  async resendOtp(@Body() dto: ResendOtpDto) {
+    return await this.authService.resendOtp(dto.id);
   }
 
   /**
@@ -257,8 +261,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.logout(user.id);
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    this.clearTokenCookies(res);
 
     return { message: 'logout success' };
   }
@@ -280,14 +283,31 @@ export class AuthController {
       httpOnly: true,
       secure: this.configService.get('NODE_ENV') === 'production',
       sameSite: 'strict',
-      maxAge: 15 * 60 * 1000,
+      maxAge: ACCESS_TOKEN_MAX_AGE,
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: this.configService.get('NODE_ENV') === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: REFRESH_TOKEN_MAX_AGE,
     });
+  }
+
+  /**
+   * Clear cookies with options
+   * @param res server response
+   * @returns void
+   */
+  private clearTokenCookies(res: Response) {
+    const cookieOptions = {
+      httpOnly: true,
+      secure: this.configService.get('NODE_ENV') === 'production',
+      sameSite: 'strict' as const,
+      path: '/',
+    };
+
+    res.clearCookie('access_token', cookieOptions);
+    res.clearCookie('refresh_token', cookieOptions);
   }
 }

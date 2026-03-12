@@ -21,7 +21,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
     const secret = configService.get<string>('JWT_REFRESH_SECRET');
 
     if (!secret) {
-      throw new Error('JWT_SECRET is not defined in environment');
+      throw new Error('JWT_REFRESH_SECRET is not defined in environment');
     }
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
@@ -37,7 +37,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
     const refreshToken = req.cookies?.['refresh_token'];
     if (!refreshToken)
       throw new UnauthorizedException('Refresh token not found');
-    
+
     const hashedToken = crypto
       .createHash('sha256')
       .update(refreshToken)
