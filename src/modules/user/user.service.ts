@@ -4,7 +4,11 @@ import { User } from './entities/user.entity';
 import { DeletedUser } from './entities/deletedUser.entity';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { CreateAuthDto } from '../auth/dto/signup.dto';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -150,7 +154,7 @@ export class UserService {
    * @param hashedToken - hashed token string
    * @param type - token type (refresh, reset, verify...)
    * @param expiresAt - token expiration date
-   * @returns saved Token
+   * @returns void
    */
   async saveToken(
     userId: string,
@@ -158,16 +162,20 @@ export class UserService {
     type: TokenType,
     expiresAt: Date,
   ) {
-    await this.tokenRepository.delete({ userId, type });
-
-    return this.tokenRepository.save({
-      userId,
-      token: hashedToken,
-      type,
-      expiresAt,
-      attempts: 0,
-      lastSentAt: new Date(),
-    });
+    await this.tokenRepository.upsert(
+      {
+        userId,
+        token: hashedToken,
+        type,
+        expiresAt,
+        attempts: 0,
+        lastSentAt: new Date(),
+      },
+      {
+        conflictPaths: ['userId', 'type'], // matches your @Index
+        skipUpdateIfNoValuesChanged: true,
+      },
+    );
   }
 
   /**
@@ -178,6 +186,9 @@ export class UserService {
    * @returns Token if found, null otherwise
    */
   async getToken(type: TokenType, userId?: string, tokenValue?: string) {
+    if (!userId && !tokenValue) {
+      throw new BadRequestException('userId or tokenValue is required');
+    }
     const where: FindOptionsWhere<Token> = { type };
 
     if (userId) where.userId = userId;
@@ -196,6 +207,9 @@ export class UserService {
    * @returns void
    */
   async clearToken(type: TokenType, userId?: string, tokenValue?: string) {
+    if (!userId && !tokenValue) {
+      throw new BadRequestException('userId or tokenValue is required');
+    }
     const where: FindOptionsWhere<Token> = { type };
 
     if (userId) where.userId = userId;

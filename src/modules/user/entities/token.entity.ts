@@ -11,7 +11,7 @@ import { User } from './user.entity';
 import { TokenType } from '../../auth/constants/token-type.constant';
 
 @Entity()
-@Index(['userId', 'type'])
+@Index(['userId', 'type'], { unique: true })
 export class Token {
   @PrimaryGeneratedColumn('uuid')
   id: string;
