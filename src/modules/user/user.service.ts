@@ -134,6 +134,8 @@ export class UserService {
 
   /**
    * Update user based on id
+   * NOTE: Callers are responsible for pre-processing sensitive fields
+   * (e.g., password must be hashed before being passed here).
    * @param id User id
    * @param fields user properties to be updated
    * @returns void
