@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   Body,
+  Column,
   Container,
   Font,
   Head,
@@ -14,45 +15,30 @@ import {
   Text,
 } from '@react-email/components';
 
-// ─────────────────────────────────────────────────────────────
-//  Props
-// ─────────────────────────────────────────────────────────────
 interface OTPEmailTemplateProps {
-  /** The 6-digit OTP code (required) */
   otp: string;
-  /** Your application / brand name */
   appName?: string;
-  /** Minutes until the OTP expires */
   expiryMins?: number;
-  /** Optional recipient name or email for personalised greeting */
   recipientName?: string;
-  /** Support / reply-to email address */
-  supportEmail?: string;
-  /** Physical company address shown in footer */
-  companyAddress?: string;
-  /** Hex color used for the accent stripe and OTP block */
   primaryColor?: string;
 }
 
-// ─────────────────────────────────────────────────────────────
-//  Helpers
-// ─────────────────────────────────────────────────────────────
-/** Splits "847291" → "847 291" for readability */
+/**
+ * parse OTP to be readable
+ * @param otp OTP string
+ * @returns parsed OTP
+ */
 const formatOtp = (otp: string) => otp.replace(/^(\d{3})(\d{3})$/, '$1 $2');
 
-// ─────────────────────────────────────────────────────────────
-//  Template
-// ─────────────────────────────────────────────────────────────
 export const OTPEmailTemplate = ({
-  otp = '000000',
-  appName = 'YourApp',
-  expiryMins = 10,
+  otp,
+  appName = 'Quizzer',
+  expiryMins = 5,
   recipientName = '',
-  supportEmail = 'support@yourapp.com',
-  companyAddress = '123 Main St, San Francisco CA 94105',
-  primaryColor = '#1a1a1a',
+  primaryColor = '#0f1fd1',
 }: OTPEmailTemplateProps) => {
   const previewText = `Your ${appName} verification code is ${otp}`;
+  const initial = appName.charAt(0).toUpperCase();
 
   return (
     <Html lang="en" dir="ltr">
@@ -78,33 +64,23 @@ export const OTPEmailTemplate = ({
 
           {/* ── Main content ── */}
           <Section style={styles.content}>
-            {/* Brand mark */}
-            <Row>
-              <Section style={styles.brandRow}>
-                <span
+            {/* ── Brand mark ── */}
+            <Row style={styles.brandRow}>
+              {/* Logo column — fixed width */}
+              <Column style={styles.logoColumn}>
+                <div
                   style={{ ...styles.logoMark, backgroundColor: primaryColor }}
                 >
-                  {/* Inline SVG circle — works in all email clients */}
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <circle
-                      cx="7"
-                      cy="7"
-                      r="5.5"
-                      stroke="#faf9f6"
-                      strokeWidth="2.5"
-                    />
-                  </svg>
-                </span>
+                  <span style={styles.logoInitial}>{initial}</span>
+                </div>
+              </Column>
+
+              {/* App name column */}
+              <Column style={styles.brandNameColumn}>
                 <Text style={{ ...styles.brandName, color: primaryColor }}>
                   {appName}
                 </Text>
-              </Section>
+              </Column>
             </Row>
 
             {/* Heading */}
@@ -140,23 +116,12 @@ export const OTPEmailTemplate = ({
               <Text style={styles.noticeText}>
                 If you didn&apos;t request this code, you can safely ignore this
                 email — your account is safe. Never share this code with anyone.{' '}
-                <strong style={{ color: '#bbb' }}>{appName}</strong> will never
+                <strong style={{ color: 'black' }}>{appName}</strong> will never
                 ask you for your OTP.
               </Text>
             </Section>
 
             <Hr style={styles.divider} />
-
-            {/* Footer */}
-            <Text style={styles.footerText}>
-              Questions? Email us at{' '}
-              <Link href={`mailto:${supportEmail}`} style={styles.footerLink}>
-                {supportEmail}
-              </Link>
-            </Text>
-            <Text style={styles.footerText}>
-              {appName} &middot; {companyAddress}
-            </Text>
           </Section>
 
           {/* ── Footer link bar ── */}
@@ -179,90 +144,94 @@ export const OTPEmailTemplate = ({
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-//  Default export with preview defaults
-// ─────────────────────────────────────────────────────────────
-OTPEmailTemplate.PreviewProps = {
-  otp: '847291',
-  appName: 'YourApp',
-  expiryMins: 10,
-  recipientName: 'John',
-  supportEmail: 'support@yourapp.com',
-  companyAddress: '123 Main St, San Francisco CA 94105',
-  primaryColor: '#1a1a1a',
-} satisfies OTPEmailTemplateProps;
-
 export default OTPEmailTemplate;
 
-// ─────────────────────────────────────────────────────────────
-//  Styles  (inline — required for email client compatibility)
-// ─────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
   body: {
-    backgroundColor: '#f0ede6',
+    backgroundColor: '#eee',
     fontFamily: "Georgia, 'Times New Roman', Times, serif",
     margin: '0',
     padding: '40px 0',
   },
   container: {
-    backgroundColor: '#faf9f6',
+    backgroundColor: 'white',
     borderRadius: '6px',
     maxWidth: '560px',
     margin: '0 auto',
     overflow: 'hidden',
   },
 
-  // Accent stripe
   accentStripe: {
     height: '4px',
     width: '100%',
   },
 
-  // Main body padding
   content: {
-    padding: '48px 52px 40px',
+    paddingTop: '48px',
+    paddingBottom: '40px',
+    paddingLeft: '52px',
+    paddingRight: '52px',
   },
 
-  // Brand row
   brandRow: {
-    display: 'flex',
-    alignItems: 'center',
     marginBottom: '36px',
   },
-  logoMark: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '30px',
-    height: '30px',
-    borderRadius: '6px',
+  logoColumn: {
+    width: '44px',
     verticalAlign: 'middle',
-    marginRight: '10px',
-    padding: '8px',
+  },
+  logoMark: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '8px',
+    textAlign: 'center',
+    verticalAlign: 'middle',
+    display: 'table',
+  },
+  logoInitial: {
+    display: 'table-cell',
+    verticalAlign: 'middle',
+    textAlign: 'center',
+    color: '#ffffff',
+    fontSize: '18px',
+    fontWeight: '800',
+    fontFamily: "Georgia, 'Times New Roman', Times, serif",
+    letterSpacing: '-0.5px',
+    lineHeight: '1',
+  },
+  brandNameColumn: {
+    verticalAlign: 'middle',
   },
   brandName: {
     display: 'inline',
     fontSize: '15px',
     fontWeight: '700',
     letterSpacing: '0.3px',
-    margin: '0',
-    verticalAlign: 'middle',
+    marginTop: '0',
+    marginBottom: '0',
+    marginLeft: '0',
+    marginRight: '0',
   },
 
-  // Typography
   heading: {
     fontSize: '26px',
     fontWeight: '700',
     color: '#1a1a1a',
     lineHeight: '1.25',
     letterSpacing: '-0.4px',
-    margin: '0 0 14px',
+    marginTop: '0',
+    marginBottom: '14px',
+    marginLeft: '0',
+    marginRight: '0',
   },
   bodyText: {
     fontSize: '15px',
     color: '#666666',
     lineHeight: '1.7',
-    margin: '0 0 6px',
+    marginTop: '0',
+    marginBottom: '6px',
+    marginLeft: '0',
+    marginRight: '0',
   },
   expiryText: {
     fontSize: '13px',
@@ -270,13 +239,18 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: '1.6',
     fontFamily: "'Courier New', Courier, monospace",
     letterSpacing: '0.3px',
-    margin: '0 0 32px',
+    marginTop: '0',
+    marginBottom: '32px',
+    marginLeft: '0',
+    marginRight: '0',
   },
 
-  // OTP block
   otpSection: {
     borderRadius: '8px',
-    padding: '32px 28px 24px',
+    paddingTop: '32px',
+    paddingBottom: '24px',
+    paddingLeft: '28px',
+    paddingRight: '28px',
     marginBottom: '32px',
     textAlign: 'center',
   },
@@ -286,7 +260,10 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: '3px',
     textTransform: 'uppercase',
     fontFamily: "'Courier New', Courier, monospace",
-    margin: '0 0 16px',
+    marginTop: '0',
+    marginBottom: '16px',
+    marginLeft: '0',
+    marginRight: '0',
   },
   otpCode: {
     fontSize: '48px',
@@ -294,7 +271,10 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#ffffff',
     letterSpacing: '14px',
     lineHeight: '1',
-    margin: '0 0 16px',
+    marginTop: '0',
+    marginBottom: '16px',
+    marginLeft: '0',
+    marginRight: '0',
   },
   otpHint: {
     fontSize: '11px',
@@ -304,9 +284,8 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '0',
   },
 
-  // Security notice
   noticeSection: {
-    borderLeft: '3px solid #e0ddd6',
+    borderLeft: '3px solid #d6d6d6',
     paddingLeft: '16px',
     marginBottom: '36px',
   },
@@ -317,30 +296,36 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '0',
   },
 
-  // Divider
   divider: {
     borderColor: '#e8e4dc',
-    margin: '0 0 24px',
+    marginTop: '0',
+    marginBottom: '24px',
+    marginLeft: '0',
+    marginRight: '0',
   },
 
-  // Footer
   footerText: {
     fontSize: '12px',
     color: '#bbbbbb',
     lineHeight: '1.7',
     fontFamily: "'Courier New', Courier, monospace",
-    margin: '0 0 4px',
+    marginTop: '0',
+    marginBottom: '4px',
+    marginLeft: '0',
+    marginRight: '0',
   },
   footerLink: {
     color: '#999999',
     textDecoration: 'underline',
   },
 
-  // Link bar
   linkBar: {
-    backgroundColor: '#f0ede6',
+    backgroundColor: '#e6e6e6',
     borderTop: '1px solid #e8e4dc',
-    padding: '14px 52px',
+    paddingTop: '14px',
+    paddingBottom: '14px',
+    paddingLeft: '52px',
+    paddingRight: '52px',
     textAlign: 'center',
   },
   linkBarItem: {
@@ -349,7 +334,10 @@ const styles: Record<string, React.CSSProperties> = {
     textDecoration: 'underline',
     fontFamily: "'Courier New', Courier, monospace",
     letterSpacing: '0.5px',
-    margin: '0 8px',
+    marginLeft: '8px',
+    marginRight: '8px',
+    marginTop: '0',
+    marginBottom: '0',
   },
   linkBarSep: {
     display: 'inline',

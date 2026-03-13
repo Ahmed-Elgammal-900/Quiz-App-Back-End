@@ -1,44 +1,56 @@
 import { Injectable } from '@nestjs/common';
 import { render } from '@react-email/components';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
 import PasswordResetEmail from './templates/reset-password';
 import OTPEmailTemplate from './templates/email-verification';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class MailService {
-  private resend: Resend;
+  private transporter: nodemailer.Transporter;
   constructor(private configService: ConfigService) {
-    this.resend = new Resend(configService.get('RESEND_API_KEY'));
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: configService.get('GMAIL_USER'),
+        pass: configService.get('GMAIL_APP_PASSWORD'),
+      },
+    });
   }
 
-  async sendResetPasswordEmail(email: string, resetToken: string) {
+  async sendResetPasswordEmail(
+    email: string,
+    resetToken: string,
+    name?: string,
+  ) {
     const appUrl = this.configService.get<string>('ORIGIN');
     const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
-    const emailHtml = await render(PasswordResetEmail({ resetUrl }));
+    const emailHtml = await render(
+      PasswordResetEmail({ resetUrl, recipientName: name }),
+    );
 
-    const { data, error } = await this.resend.emails.send({
-      from: 'Quizzer',
+    const { data, error } = await this.transporter.sendMail({
       to: email,
-      subject: 'Reset Password',
+      subject: 'Quizzer - Reset Password',
       html: emailHtml,
     });
 
     if (error) {
-      throw new Error(`Failed to send mail: ${error}`);
+      throw new Error(`Failed to send mail: ${error.message}`);
     }
 
     return data;
   }
 
-  async sendOtpEmail(email: string, otp: string) {
-    const emailHtml = await render(OTPEmailTemplate({ otp }));
+  async sendOtpEmail(email: string, otp: string, name?: string) {
+    const emailHtml = await render(
+      OTPEmailTemplate({ otp, recipientName: name }),
+    );
 
-    const { data, error } = await this.resend.emails.send({
-      from: 'Quizzer',
+    const { data, error } = await this.transporter.sendMail({
       to: email,
-      subject: 'Email Verification OTP',
+      subject: 'Quizzer - Email Verification OTP',
       html: emailHtml,
     });
 

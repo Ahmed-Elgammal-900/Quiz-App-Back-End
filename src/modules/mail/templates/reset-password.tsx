@@ -12,139 +12,31 @@ import {
   Hr,
   Font,
   Link,
+  Column,
+  Row,
 } from '@react-email/components';
 
-// interface PasswordResetEmailProps {
-//   resetUrl: string;
-//   userName?: string;
-// }
-
-// export const PasswordResetEmail = ({
-//   resetUrl,
-//   userName = 'there',
-// }: PasswordResetEmailProps) => (
-//   <Html>
-//     <Head />
-//     <Preview>Reset your password</Preview>
-//     <Body style={main}>
-//       <Container style={container}>
-//         <Heading style={h1}>Reset Your Password</Heading>
-//         <Text style={text}>Hi {userName},</Text>
-//         <Text style={text}>
-//           We received a request to reset your password. Click the button below
-//           to create a new password:
-//         </Text>
-//         <Section style={buttonContainer}>
-//           <Button style={button} href={resetUrl}>
-//             Reset Password
-//           </Button>
-//         </Section>
-//         <Text style={text}>
-//           This link will expire in 5 minutes for security reasons.
-//         </Text>
-//         <Hr style={hr} />
-//         <Text style={footer}>
-//           If you didn't request this, please ignore this email or contact
-//           support if you have concerns.
-//         </Text>
-//       </Container>
-//     </Body>
-//   </Html>
-// );
-
-// const main = {
-//   backgroundColor: '#f6f9fc',
-//   fontFamily:
-//     '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
-// };
-
-// const container = {
-//   backgroundColor: '#ffffff',
-//   margin: '0 auto',
-//   padding: '20px 0 48px',
-//   marginBottom: '64px',
-// };
-
-// const h1 = {
-//   color: '#333',
-//   fontSize: '24px',
-//   fontWeight: 'bold',
-//   margin: '40px 0',
-//   padding: '0',
-//   textAlign: 'center' as const,
-// };
-
-// const text = {
-//   color: '#333',
-//   fontSize: '16px',
-//   lineHeight: '26px',
-//   margin: '16px 20px',
-// };
-
-// const buttonContainer = {
-//   textAlign: 'center' as const,
-//   margin: '32px 0',
-// };
-
-// const button = {
-//   backgroundColor: '#4CAF50',
-//   borderRadius: '5px',
-//   color: '#fff',
-//   fontSize: '16px',
-//   fontWeight: 'bold',
-//   textDecoration: 'none',
-//   textAlign: 'center' as const,
-//   display: 'block',
-//   padding: '12px 24px',
-// };
-
-// const hr = {
-//   borderColor: '#e6ebf1',
-//   margin: '20px 0',
-// };
-
-// const footer = {
-//   color: '#8898aa',
-//   fontSize: '12px',
-//   lineHeight: '16px',
-//   margin: '16px 20px',
-// };
-
-// export default PasswordResetEmail;
-
-// ─────────────────────────────────────────────────────────────
-//  Props
-// ─────────────────────────────────────────────────────────────
 interface ResetPasswordEmailProps {
-  /** Full reset URL (required) */
   resetUrl: string;
-  /** Your application / brand name */
+
   appName?: string;
-  /** Minutes until the reset link expires */
+
   expiryMins?: number;
-  /** Optional recipient name for personalised greeting */
+
   recipientName?: string;
-  /** Support / reply-to email address */
-  supportEmail?: string;
-  /** Physical company address shown in footer */
-  companyAddress?: string;
-  /** Hex color used for the accent stripe and CTA button */
+
   primaryColor?: string;
 }
 
-// ─────────────────────────────────────────────────────────────
-//  Template
-// ─────────────────────────────────────────────────────────────
 export const ResetPasswordEmail = ({
-  resetUrl = 'https://yourapp.com/reset-password?token=abc123',
-  appName = 'YourApp',
-  expiryMins = 30,
+  resetUrl,
+  appName = 'Quizzer',
+  expiryMins = 15,
   recipientName = '',
-  supportEmail = 'support@yourapp.com',
-  companyAddress = '123 Main St, San Francisco CA 94105',
-  primaryColor = '#1a1a1a',
+  primaryColor = '#0f1fd1',
 }: ResetPasswordEmailProps) => {
   const previewText = `Reset your ${appName} password`;
+  const initial = appName.charAt(0).toUpperCase();
 
   return (
     <Html lang="en" dir="ltr">
@@ -170,68 +62,27 @@ export const ResetPasswordEmail = ({
 
           {/* ── Main content ── */}
           <Section style={styles.content}>
-            {/* Brand mark */}
-            <Section style={styles.brandRow}>
-              <span
-                style={{ ...styles.logoMark, backgroundColor: primaryColor }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
+            {/* ── Brand mark — Row/Column renders as table/td for proper vertical align ── */}
+            <Row style={styles.brandRow}>
+              {/* Logo column — fixed width */}
+              <Column style={styles.logoColumn}>
+                <div
+                  style={{ ...styles.logoMark, backgroundColor: primaryColor }}
                 >
-                  <circle
-                    cx="7"
-                    cy="7"
-                    r="5.5"
-                    stroke="#faf9f6"
-                    strokeWidth="2.5"
-                  />
-                </svg>
-              </span>
-              <Text style={{ ...styles.brandName, color: primaryColor }}>
-                {appName}
-              </Text>
-            </Section>
+                  <span style={styles.logoInitial}>{initial}</span>
+                </div>
+              </Column>
+
+              {/* App name column */}
+              <Column style={styles.brandNameColumn}>
+                <Text style={{ ...styles.brandName, color: primaryColor }}>
+                  {appName}
+                </Text>
+              </Column>
+            </Row>
 
             {/* Lock icon */}
-            <Section style={styles.iconSection}>
-              <span
-                style={{
-                  ...styles.iconWrap,
-                  backgroundColor: `${primaryColor}12`,
-                  border: `1.5px solid ${primaryColor}22`,
-                }}
-              >
-                <svg
-                  width="28"
-                  height="28"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <rect
-                    x="3"
-                    y="11"
-                    width="18"
-                    height="11"
-                    rx="2"
-                    stroke={primaryColor}
-                    strokeWidth="1.8"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M7 11V7a5 5 0 0 1 10 0v4"
-                    stroke={primaryColor}
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="12" cy="16" r="1.5" fill={primaryColor} />
-                </svg>
-              </span>
-            </Section>
+            <Text style={styles.iconEmoji}>🔒</Text>
 
             {/* Heading */}
             <Heading as="h1" style={styles.heading}>
@@ -280,29 +131,11 @@ export const ResetPasswordEmail = ({
             <Section style={styles.noticeSection}>
               <Text style={styles.noticeText}>
                 If you didn&apos;t request a password reset, please ignore this
-                email or{' '}
-                <Link
-                  href={`mailto:${supportEmail}`}
-                  style={{ color: '#999', textDecoration: 'underline' }}
-                >
-                  contact support
-                </Link>{' '}
-                immediately. Your password will remain unchanged.
+                email immediately. Your password will remain unchanged.
               </Text>
             </Section>
 
             <Hr style={styles.divider} />
-
-            {/* Footer */}
-            <Text style={styles.footerText}>
-              Need help?{' '}
-              <Link href={`mailto:${supportEmail}`} style={styles.footerLink}>
-                {supportEmail}
-              </Link>
-            </Text>
-            <Text style={styles.footerText}>
-              {appName} &middot; {companyAddress}
-            </Text>
           </Section>
 
           {/* ── Footer link bar ── */}
@@ -325,84 +158,77 @@ export const ResetPasswordEmail = ({
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-//  Preview defaults (react-email dev server)
-// ─────────────────────────────────────────────────────────────
-ResetPasswordEmail.PreviewProps = {
-  resetUrl: 'https://yourapp.com/reset-password?token=abc123xyz',
-  appName: 'YourApp',
-  expiryMins: 30,
-  recipientName: 'John',
-  supportEmail: 'support@yourapp.com',
-  companyAddress: '123 Main St, San Francisco CA 94105',
-  primaryColor: '#1a1a1a',
-} satisfies ResetPasswordEmailProps;
-
 export default ResetPasswordEmail;
 
-// ─────────────────────────────────────────────────────────────
-//  Styles  (all inline — required for email client compat.)
-// ─────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
   body: {
-    backgroundColor: '#f0ede6',
+    backgroundColor: '#eee',
     fontFamily: "Georgia, 'Times New Roman', Times, serif",
     margin: '0',
     padding: '40px 0',
   },
   container: {
-    backgroundColor: '#faf9f6',
+    backgroundColor: 'white',
     borderRadius: '6px',
     maxWidth: '560px',
     margin: '0 auto',
     overflow: 'hidden',
   },
-
+  iconEmoji: {
+    fontSize: '40px',
+    marginTop: '0',
+    marginBottom: '28px',
+    marginLeft: '0',
+    marginRight: '0',
+  },
   accentStripe: {
     height: '4px',
     width: '100%',
   },
-
   content: {
-    padding: '48px 52px 40px',
+    paddingTop: '48px',
+    paddingBottom: '40px',
+    paddingLeft: '52px',
+    paddingRight: '52px',
   },
-
-  // Brand
   brandRow: {
     marginBottom: '36px',
   },
-  logoMark: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '30px',
-    height: '30px',
-    borderRadius: '6px',
+  logoColumn: {
+    width: '44px',
     verticalAlign: 'middle',
-    marginRight: '10px',
-    padding: '8px',
+  },
+  logoMark: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '8px',
+    textAlign: 'center',
+    verticalAlign: 'middle',
+    display: 'table',
+  },
+  logoInitial: {
+    display: 'table-cell',
+    verticalAlign: 'middle',
+    textAlign: 'center',
+    color: '#ffffff',
+    fontSize: '18px',
+    fontWeight: '800',
+    fontFamily: "Georgia, 'Times New Roman', Times, serif",
+    letterSpacing: '-0.5px',
+    lineHeight: '1',
+  },
+  brandNameColumn: {
+    verticalAlign: 'middle',
   },
   brandName: {
     display: 'inline',
     fontSize: '15px',
     fontWeight: '700',
     letterSpacing: '0.3px',
-    margin: '0',
-    verticalAlign: 'middle',
-  },
-
-  // Lock icon
-  iconSection: {
-    marginBottom: '28px',
-  },
-  iconWrap: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '60px',
-    height: '60px',
-    borderRadius: '14px',
-    padding: '16px',
+    marginTop: '0',
+    marginBottom: '0',
+    marginLeft: '0',
+    marginRight: '0',
   },
 
   // Typography
@@ -412,13 +238,19 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#1a1a1a',
     lineHeight: '1.25',
     letterSpacing: '-0.4px',
-    margin: '0 0 16px',
+    marginTop: '0',
+    marginBottom: '16px',
+    marginLeft: '0',
+    marginRight: '0',
   },
   bodyText: {
     fontSize: '15px',
     color: '#666666',
     lineHeight: '1.75',
-    margin: '0 0 8px',
+    marginTop: '0',
+    marginBottom: '8px',
+    marginLeft: '0',
+    marginRight: '0',
   },
   expiryText: {
     fontSize: '13px',
@@ -426,7 +258,10 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: '1.6',
     fontFamily: "'Courier New', Courier, monospace",
     letterSpacing: '0.3px',
-    margin: '0 0 32px',
+    marginTop: '0',
+    marginBottom: '32px',
+    marginLeft: '0',
+    marginRight: '0',
   },
 
   // CTA Button
@@ -440,7 +275,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: '600',
     fontFamily: "Georgia, 'Times New Roman', Times, serif",
     letterSpacing: '0.4px',
-    padding: '14px 32px',
+    paddingTop: '14px',
+    paddingBottom: '14px',
+    paddingLeft: '32px',
+    paddingRight: '32px',
     borderRadius: '5px',
     textDecoration: 'none',
     display: 'inline-block',
@@ -452,14 +290,20 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#aaaaaa',
     fontFamily: "'Courier New', Courier, monospace",
     letterSpacing: '0.3px',
-    margin: '0 0 10px',
+    marginTop: '0',
+    marginBottom: '10px',
+    marginLeft: '0',
+    marginRight: '0',
   },
   urlBox: {
-    backgroundColor: '#f0ede6',
+    backgroundColor: '#e6e6e6',
     borderRadius: '4px',
-    padding: '12px 16px',
+    paddingTop: '12px',
+    paddingBottom: '12px',
+    paddingLeft: '16px',
+    paddingRight: '16px',
     marginBottom: '32px',
-    border: '1px solid #e8e4dc',
+    border: '1px solid #d6d6d6',
   },
   urlText: {
     margin: '0',
@@ -474,7 +318,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Security notice
   noticeSection: {
-    borderLeft: '3px solid #e0ddd6',
+    borderLeft: '3px solid #d6d6d6',
     paddingLeft: '16px',
     marginBottom: '36px',
   },
@@ -486,8 +330,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   divider: {
-    borderColor: '#e8e4dc',
-    margin: '0 0 24px',
+    borderColor: '#e6e6e6',
+    marginTop: '0',
+    marginBottom: '24px',
+    marginLeft: '0',
+    marginRight: '0',
   },
 
   footerText: {
@@ -495,7 +342,10 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#bbbbbb',
     lineHeight: '1.7',
     fontFamily: "'Courier New', Courier, monospace",
-    margin: '0 0 4px',
+    marginTop: '0',
+    marginBottom: '4px',
+    marginLeft: '0',
+    marginRight: '0',
   },
   footerLink: {
     color: '#999999',
@@ -503,9 +353,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   linkBar: {
-    backgroundColor: '#f0ede6',
+    backgroundColor: '#e6e6e6',
     borderTop: '1px solid #e8e4dc',
-    padding: '14px 52px',
+    paddingTop: '14px',
+    paddingBottom: '14px',
+    paddingLeft: '52px',
+    paddingRight: '52px',
     textAlign: 'center' as const,
   },
   linkBarItem: {
@@ -514,7 +367,10 @@ const styles: Record<string, React.CSSProperties> = {
     textDecoration: 'underline',
     fontFamily: "'Courier New', Courier, monospace",
     letterSpacing: '0.5px',
-    margin: '0 6px',
+    marginLeft: '6px',
+    marginRight: '6px',
+    marginTop: '0',
+    marginBottom: '0',
   },
   linkBarSep: {
     display: 'inline',
