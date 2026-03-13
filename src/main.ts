@@ -16,11 +16,20 @@ async function bootstrap() {
     logger: ['verbose', 'debug', 'log', 'warn', 'error', 'fatal'],
   });
 
-  const frontEndOrigin = process.env.FRONT_END_ORIGIN;
-  if (!frontEndOrigin) {
+  const frontEndOriginRaw = process.env.FRONT_END_ORIGIN;
+  if (!frontEndOriginRaw) {
     throw new Error('FRONT_END_ORIGIN is required');
   }
-
+  let frontEndOrigin: string;
+  try {
+    const parsed = new URL(frontEndOriginRaw);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error();
+    }
+    frontEndOrigin = parsed.origin;
+  } catch {
+    throw new Error('FRONT_END_ORIGIN must be a valid absolute http(s) URL');
+  }
   app.use(helmet());
 
   app.enableCors({ origin: frontEndOrigin, credentials: true });
