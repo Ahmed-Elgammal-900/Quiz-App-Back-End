@@ -9,11 +9,18 @@ import * as nodemailer from 'nodemailer';
 export class MailService {
   private transporter: nodemailer.Transporter;
   constructor(private configService: ConfigService) {
+    const gmailUser = this.configService.get<string>('GMAIL_USER');
+    const gmailPass = this.configService.get<string>('GMAIL_APP_PASSWORD');
+
+    if (!gmailUser || !gmailPass) {
+      throw new Error('Mail configuration is incomplete');
+    }
+
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: configService.get('GMAIL_USER'),
-        pass: configService.get('GMAIL_APP_PASSWORD'),
+        user: gmailUser,
+        pass: gmailPass,
       },
     });
   }
