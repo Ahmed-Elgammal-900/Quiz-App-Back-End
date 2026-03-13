@@ -2,7 +2,7 @@ import { Controller, Delete, Res } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/user.decorator';
-import { UserResponse } from '../auth/types/respnse-types';
+import { UserResponse } from '../auth/types/response-types';
 import { ConfigService } from '@nestjs/config';
 
 @Controller('user')
