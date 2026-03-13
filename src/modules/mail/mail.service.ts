@@ -35,7 +35,7 @@ export class MailService {
     const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
     const emailHtml = await render(
-      PasswordResetEmail({ resetUrl, recipientName: name, expiryMins: 10 }),
+      PasswordResetEmail({ resetUrl, recipientName: name }),
     );
 
     try {
