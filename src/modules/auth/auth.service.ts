@@ -150,6 +150,10 @@ export class AuthService {
 
     const user = await this.userService.findOne({ id: resetToken.userId });
 
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
     if (!user.isEmailVerified) {
       await this.sendOtp(user.id, user.email, user.name);
     }
@@ -167,7 +171,7 @@ export class AuthService {
    * @throws {BadRequestException} If current password is wrong or new password matches the old one
    */
   async changePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
-    const user = await this.userService.findOne(id);
+    const user = await this.userService.findOne({ id });
     if (!user) throw new NotFoundException('User not found');
 
     const isMatch = await bcrypt.compare(
@@ -238,7 +242,17 @@ export class AuthService {
     }
 
     await this.userService.verifyUser(userId);
-    return this.userService.findOne({ id: userId });
+
+    const user = await this.userService.findOne({ id: userId });
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+    
+    return {
+      id: user.id,
+      email: user.email,
+      isEmailVerified: user.isEmailVerified,
+    };
   }
 
   /**
