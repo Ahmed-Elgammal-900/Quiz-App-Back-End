@@ -11,8 +11,9 @@ export class MailService {
   constructor(private configService: ConfigService) {
     const gmailUser = this.configService.get<string>('GMAIL_USER');
     const gmailPass = this.configService.get<string>('GMAIL_APP_PASSWORD');
+    const origin = this.configService.get<string>('ORIGIN');
 
-    if (!gmailUser || !gmailPass) {
+    if (!gmailUser || !gmailPass || !origin) {
       throw new Error('Mail configuration is incomplete');
     }
 
@@ -39,6 +40,7 @@ export class MailService {
 
     try {
       return await this.transporter.sendMail({
+        from: `"Quizzer" <${this.configService.get('GMAIL_USER')}>`,
         to: email,
         subject: 'Quizzer - Reset Password',
         html: emailHtml,
@@ -56,6 +58,7 @@ export class MailService {
 
     try {
       return await this.transporter.sendMail({
+        from: `"Quizzer" <${this.configService.get('GMAIL_USER')}>`,
         to: email,
         subject: 'Quizzer - Email Verification OTP',
         html: emailHtml,

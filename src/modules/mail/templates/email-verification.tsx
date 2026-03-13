@@ -6,9 +6,7 @@ import {
   Font,
   Head,
   Heading,
-  Hr,
   Html,
-  Link,
   Preview,
   Row,
   Section,
@@ -24,7 +22,8 @@ interface OTPEmailTemplateProps {
 }
 
 /**
- * parse OTP to be readable
+ * Formats a 6-digit OTP into "111 111" display format
+ * Returns original string unchanged if input is not exactly 6 digits
  * @param otp OTP string
  * @returns parsed OTP
  */

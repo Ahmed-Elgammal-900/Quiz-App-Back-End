@@ -9,7 +9,6 @@ import {
   Preview,
   Section,
   Text,
-  Hr,
   Font,
   Link,
   Column,
