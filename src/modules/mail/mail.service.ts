@@ -32,10 +32,14 @@ export class MailService {
     name?: string,
   ) {
     const appUrl = this.configService.get<string>('ORIGIN');
-    const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
+    const resetUrl = new URL('/reset-password', appUrl);
+    resetUrl.searchParams.set('token', resetToken);
 
     const emailHtml = await render(
-      PasswordResetEmail({ resetUrl, recipientName: name }),
+      PasswordResetEmail({
+        resetUrl: resetUrl.toString(),
+        recipientName: name,
+      }),
     );
 
     try {
@@ -51,9 +55,14 @@ export class MailService {
     }
   }
 
-  async sendOtpEmail(email: string, otp: string, name?: string) {
+  async sendOtpEmail(
+    email: string,
+    otp: string,
+    name?: string,
+    expiryMins = 5,
+  ) {
     const emailHtml = await render(
-      OTPEmailTemplate({ otp, recipientName: name, expiryMins: 5 }),
+      OTPEmailTemplate({ otp, recipientName: name, expiryMins }),
     );
 
     try {
