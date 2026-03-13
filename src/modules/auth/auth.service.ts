@@ -40,7 +40,7 @@ export class AuthService {
    */
   async createUser(createAuthDto: CreateAuthDto) {
     const user = await this.userService.createUser(createAuthDto);
-    await this.sendOtp(user.id, user.email);
+    await this.sendOtp(user.id, user.email, user.name);
     return user;
   }
 
@@ -63,7 +63,7 @@ export class AuthService {
     const user = await this.userService.findOrCreateGoogleUser(googleDto);
 
     if (!user.isEmailVerified) {
-      await this.sendOtp(user.id, user.email);
+      await this.sendOtp(user.id, user.email, user.name);
     }
 
     return {
@@ -102,7 +102,7 @@ export class AuthService {
     }
 
     if (!user.isEmailVerified) {
-      await this.sendOtp(user.id, user.email);
+      await this.sendOtp(user.id, user.email, user.name);
     }
 
     return user;
@@ -151,7 +151,7 @@ export class AuthService {
     const user = await this.userService.findOne({ id: resetToken.userId });
 
     if (!user.isEmailVerified) {
-      await this.sendOtp(user.id, user.email);
+      await this.sendOtp(user.id, user.email, user.name);
     }
 
     return user;
@@ -259,7 +259,7 @@ export class AuthService {
       throw new BadRequestException('Email already verified');
     }
 
-    return this.sendOtp(userId, user.email);
+    return this.sendOtp(userId, user.email, user.name);
   }
 
   /**
@@ -269,10 +269,11 @@ export class AuthService {
    *
    * @param userId - The ID of the user to send the OTP to
    * @param email - The email address to deliver the OTP to
+   * @param name - user name to be sent with email
    * @returns A success message object
    * @throws {BadRequestException} If called again within the 60-second cooldown window
    */
-  async sendOtp(userId: string, email: string) {
+  async sendOtp(userId: string, email: string, name?: string) {
     const existing = await this.userService.getToken(
       TokenType.EMAIL_VERIFY,
       userId,
@@ -298,7 +299,7 @@ export class AuthService {
     );
 
     try {
-      await this.mailService.sendOtpEmail(email, otp);
+      await this.mailService.sendOtpEmail(email, otp, name);
     } catch (err) {
       await this.userService.clearToken(TokenType.EMAIL_VERIFY, userId);
       throw err;
@@ -331,7 +332,7 @@ export class AuthService {
       TokenType.PASSWORD_RESET,
       expiresAt,
     );
-    await this.mailService.sendResetPasswordEmail(email, resetToken);
+    await this.mailService.sendResetPasswordEmail(email, resetToken, user.name);
 
     return { message: 'If email exists, reset link has been sent' };
   }
