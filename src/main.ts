@@ -12,7 +12,7 @@ async function bootstrap() {
 
   app.use(helmet());
 
-  app.enableCors({ origin: process.env.ORIGIN, credentials: true });
+  app.enableCors({ origin: process.env.FRONT_END_ORIGIN, credentials: true });
 
   app.useGlobalFilters(new GlobalExceptionFilter());
   
