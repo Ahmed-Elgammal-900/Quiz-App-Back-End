@@ -11,9 +11,9 @@ export class MailService {
   constructor(private configService: ConfigService) {
     const gmailUser = this.configService.get<string>('GMAIL_USER');
     const gmailPass = this.configService.get<string>('GMAIL_APP_PASSWORD');
-    const origin = this.configService.get<string>('ORIGIN');
+    const frontEndOrigin = this.configService.get<string>('FRONT_END_ORIGIN');
 
-    if (!gmailUser || !gmailPass || !origin) {
+    if (!gmailUser || !gmailPass || !frontEndOrigin) {
       throw new Error('Mail configuration is incomplete');
     }
 
@@ -31,7 +31,7 @@ export class MailService {
     resetToken: string,
     name?: string,
   ) {
-    const appUrl = this.configService.get<string>('ORIGIN');
+    const appUrl = this.configService.get<string>('FRONT_END_ORIGIN');
     const resetUrl = new URL('/reset-password', appUrl);
     resetUrl.searchParams.set('token', resetToken);
 
