@@ -134,23 +134,6 @@ export const ResetPasswordEmail = ({
                 email immediately. Your password will remain unchanged.
               </Text>
             </Section>
-
-            <Hr style={styles.divider} />
-          </Section>
-
-          {/* ── Footer link bar ── */}
-          <Section style={styles.linkBar}>
-            <Link href="#" style={styles.linkBarItem}>
-              Unsubscribe
-            </Link>
-            <Text style={styles.linkBarSep}>&nbsp;&middot;&nbsp;</Text>
-            <Link href="#" style={styles.linkBarItem}>
-              Privacy Policy
-            </Link>
-            <Text style={styles.linkBarSep}>&nbsp;&middot;&nbsp;</Text>
-            <Link href="#" style={styles.linkBarItem}>
-              Terms
-            </Link>
           </Section>
         </Container>
       </Body>
@@ -326,56 +309,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '13px',
     color: '#999999',
     lineHeight: '1.7',
-    margin: '0',
-  },
-
-  divider: {
-    borderColor: '#e6e6e6',
-    marginTop: '0',
-    marginBottom: '24px',
-    marginLeft: '0',
-    marginRight: '0',
-  },
-
-  footerText: {
-    fontSize: '12px',
-    color: '#bbbbbb',
-    lineHeight: '1.7',
-    fontFamily: "'Courier New', Courier, monospace",
-    marginTop: '0',
-    marginBottom: '4px',
-    marginLeft: '0',
-    marginRight: '0',
-  },
-  footerLink: {
-    color: '#999999',
-    textDecoration: 'underline',
-  },
-
-  linkBar: {
-    backgroundColor: '#e6e6e6',
-    borderTop: '1px solid #e8e4dc',
-    paddingTop: '14px',
-    paddingBottom: '14px',
-    paddingLeft: '52px',
-    paddingRight: '52px',
-    textAlign: 'center' as const,
-  },
-  linkBarItem: {
-    fontSize: '11px',
-    color: '#bbbbbb',
-    textDecoration: 'underline',
-    fontFamily: "'Courier New', Courier, monospace",
-    letterSpacing: '0.5px',
-    marginLeft: '6px',
-    marginRight: '6px',
-    marginTop: '0',
-    marginBottom: '0',
-  },
-  linkBarSep: {
-    display: 'inline',
-    fontSize: '11px',
-    color: '#cccccc',
     margin: '0',
   },
 };

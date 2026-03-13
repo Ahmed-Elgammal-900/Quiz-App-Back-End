@@ -27,37 +27,35 @@ export class MailService {
     const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
     const emailHtml = await render(
-      PasswordResetEmail({ resetUrl, recipientName: name }),
+      PasswordResetEmail({ resetUrl, recipientName: name, expiryMins: 10 }),
     );
 
-    const { data, error } = await this.transporter.sendMail({
-      to: email,
-      subject: 'Quizzer - Reset Password',
-      html: emailHtml,
-    });
-
-    if (error) {
-      throw new Error(`Failed to send mail: ${error.message}`);
+    try {
+      return await this.transporter.sendMail({
+        to: email,
+        subject: 'Quizzer - Reset Password',
+        html: emailHtml,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to send mail: ${message}`);
     }
-
-    return data;
   }
 
   async sendOtpEmail(email: string, otp: string, name?: string) {
     const emailHtml = await render(
-      OTPEmailTemplate({ otp, recipientName: name }),
+      OTPEmailTemplate({ otp, recipientName: name, expiryMins: 5 }),
     );
 
-    const { data, error } = await this.transporter.sendMail({
-      to: email,
-      subject: 'Quizzer - Email Verification OTP',
-      html: emailHtml,
-    });
-
-    if (error) {
-      throw new Error(`Failed to send mail: ${error}`);
+    try {
+      return await this.transporter.sendMail({
+        to: email,
+        subject: 'Quizzer - Email Verification OTP',
+        html: emailHtml,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to send mail: ${message}`);
     }
-
-    return data;
   }
 }
