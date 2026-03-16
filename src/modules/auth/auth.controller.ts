@@ -15,7 +15,7 @@ import { LoginDto } from './dto/login.dto';
 import { ForgetPasswordDto } from './dto/forget-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtUserWithRefresh, UserResponse } from './types/response-types';
-import { Public } from 'src/common/decorators/public.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { ConfigService } from '@nestjs/config';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { VerifyOtpDto } from './dto/otp.dto';
