@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,7 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import { GoogleDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import * as crypto from 'crypto';
-import { MailService } from 'src/modules/mail/mail.service';
+import { MailService } from '../mail/mail.service';
 import { UserService } from '../user/user.service';
 import { UpdatePasswordDto } from './dto/change-password.dto';
 import {
@@ -247,7 +248,7 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('user not found');
     }
-    
+
     return {
       id: user.id,
       email: user.email,
@@ -365,6 +366,47 @@ export class AuthService {
   }
 
   /**
+   * Forces email verification for a user, bypassing the OTP flow.
+   * Intended exclusively for e2e testing — throws in non-test environments.
+   *
+   * @param userId - The ID of the user to verify
+   * @returns Promise<void>
+   * @throws {ForbiddenException} If called outside of the test environment
+   *
+   * @example
+   * // In e2e test beforeAll
+   * const authService = module.get(AuthService);
+   * await authService.forceVerifyUser(userId);
+   */
+  async forceVerifyUser(userId: string): Promise<void> {
+    if (process.env.NODE_ENV !== 'test') {
+      throw new ForbiddenException('Only available in test environment');
+    }
+    await this.userService.updateUser(userId, { isEmailVerified: true });
+  }
+
+  /**
+   * Deletes a test user by email, bypassing business logic.
+   * Intended exclusively for e2e testing — throws in non-test environments.
+   * Delegates to UserService.deleteTestUser internally.
+   *
+   * @param email - The email address of the user to delete
+   * @returns Promise<void>
+   * @throws {ForbiddenException} If called outside of the test environment
+   *
+   * @example
+   * // In e2e test beforeAll — clean up before registering
+   * const authService = module.get(AuthService);
+   * await authService.deleteTestUser('test@email.com');
+   */
+  async deleteTestUser(email: string): Promise<void> {
+    if (process.env.NODE_ENV !== 'test') {
+      throw new ForbiddenException('Only available in test environment');
+    }
+    await this.userService.deleteTestUser(email);
+  }
+
+  /**
    * Generates a new access token and refresh token pair for a user.
    * Hashes and stores the refresh token in the database.
    *
@@ -379,7 +421,7 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get('JWT_ACCESS_SECRET'),
+      secret: this.configService.get('JWT_SECRET'),
       expiresIn: ACCESS_TOKEN_TIME,
     });
 
