@@ -362,7 +362,6 @@ export class QuizService {
       .innerJoin(User, 'user', 'user.id = progress.userId')
       .where('progress.passed = :passed', { passed: true })
       .getRawOne();
-
     const total = parseInt(countResult?.total) || 0;
 
     const data = await this.userQuizProgressRepo
