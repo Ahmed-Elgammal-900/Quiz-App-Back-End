@@ -250,6 +250,9 @@ export class UserService {
    * await userService.deleteTestUser('test@email.com');
    */
   async deleteTestUser(email: string): Promise<void> {
+    if (!(process.env.NODE_ENV === 'test')) {
+      throw new Error('deleteTestUser only in test environment');
+    }
     await this.userRepository.delete({ email });
   }
 }
