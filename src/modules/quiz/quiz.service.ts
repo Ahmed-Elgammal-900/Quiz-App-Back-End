@@ -65,6 +65,9 @@ export class QuizService {
     page: number = 1,
     limit: number = 10,
   ) {
+    if (page < 1 || limit < 1) {
+      throw new BadRequestException('page and limit must be >= 1');
+    }
     const skip = (page - 1) * limit;
 
     const [questions, total] = await this.questionRepo
@@ -202,11 +205,20 @@ export class QuizService {
       where: { userId, quizId },
     });
 
+    const questionExists = await this.questionRepo.existsBy({
+      id: questionId,
+      quizId,
+    });
+    if (!questionExists) {
+      throw new BadRequestException('Question does not belong to this quiz');
+    }
+
     const answer = await this.answerRepo.findOne({
-      where: { id: selectedAnswerId },
+      where: { id: selectedAnswerId, questionId },
     });
 
-    if (!answer) throw new NotFoundException('Answer not found');
+    if (!answer)
+      throw new NotFoundException('Answer not found for this question');
 
     if (!progress) throw new BadRequestException('Quiz not started yet');
 
@@ -341,6 +353,9 @@ export class QuizService {
    * @returns Paginated leaderboard with userId, name, passedQuizzes, averageScore, and totalScore
    */
   async getLeaderboard(page: number = 1, limit: number = 10) {
+    if (page < 1 || limit < 1) {
+      throw new BadRequestException('page and limit must be >= 1');
+    }
     const countResult = await this.userQuizProgressRepo
       .createQueryBuilder('progress')
       .select('COUNT(DISTINCT progress.userId)', 'total')
