@@ -264,7 +264,7 @@ export class QuizService {
       ['userId', 'quizId'],
     );
 
-    if (isLastQuestion && passed) {
+    if (isLastQuestion || passed) {
       await this.userQuizAnswerRepo.delete({ userId, quizId });
     }
 
