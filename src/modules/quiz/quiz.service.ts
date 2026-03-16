@@ -242,10 +242,7 @@ export class QuizService {
       {
         userId,
         quizId,
-        ...(!progress?.passed && {
-          score,
-          passed,
-        }),
+        ...(progress?.passed ? {} : { score, passed }),
         status: isLastQuestion
           ? QuizProgressStatus.COMPLETED
           : QuizProgressStatus.IN_PROGRESS,
@@ -350,7 +347,7 @@ export class QuizService {
       .innerJoin(User, 'user', 'user.id = progress.userId')
       .where('progress.passed = :passed', { passed: true })
       .getRawOne();
-      
+
     const total = parseInt(countResult?.total) || 0;
 
     const data = await this.userQuizProgressRepo
