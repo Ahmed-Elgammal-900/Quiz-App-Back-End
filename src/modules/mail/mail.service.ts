@@ -8,13 +8,20 @@ import * as nodemailer from 'nodemailer';
 @Injectable()
 export class MailService {
   private transporter: nodemailer.Transporter;
+  private readonly frontEndOrigin: string;
   constructor(private configService: ConfigService) {
     const gmailUser = this.configService.get<string>('GMAIL_USER');
     const gmailPass = this.configService.get<string>('GMAIL_APP_PASSWORD');
-    const origin = this.configService.get<string>('ORIGIN');
+    const frontEndOrigin = this.configService.get<string>('FRONT_END_ORIGIN');
 
-    if (!gmailUser || !gmailPass || !origin) {
+    if (!gmailUser || !gmailPass || !frontEndOrigin) {
       throw new Error('Mail configuration is incomplete');
+    }
+
+    try {
+      this.frontEndOrigin = new URL(frontEndOrigin).toString();
+    } catch {
+      throw new Error('FRONT_END_ORIGIN must be a valid absolute URL');
     }
 
     this.transporter = nodemailer.createTransport({
@@ -31,8 +38,7 @@ export class MailService {
     resetToken: string,
     name?: string,
   ) {
-    const appUrl = this.configService.get<string>('ORIGIN');
-    const resetUrl = new URL('/reset-password', appUrl);
+    const resetUrl = new URL('/reset-password', this.frontEndOrigin);
     resetUrl.searchParams.set('token', resetToken);
 
     const emailHtml = await render(

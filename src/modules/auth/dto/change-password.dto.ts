@@ -5,7 +5,7 @@ import {
   MaxLength,
   Matches,
 } from 'class-validator';
-import { Match } from 'src/common/decorators/match.decorator';
+import { Match } from '../../../common/decorators/match.decorator';
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
