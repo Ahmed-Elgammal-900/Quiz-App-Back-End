@@ -1,9 +1,21 @@
 {
-  "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
+  "moduleFileExtensions": ["js", "json", "ts", "tsx"],
+  "rootDir": "..",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
-  }
+    "^.+\\.(t)sx?$": [
+      "ts-jest",
+      {
+        "tsconfig": {
+          "jsx": "react"
+        }
+      }
+    ]
+  },
+  "moduleNameMapper": {
+    "^.+/templates/.+$": "<rootDir>/test/__mocks__/fileMock.js"
+  },
+  "forceExit": true,
+  "setupFiles": ["<rootDir>/test/setup.ts"]
 }
