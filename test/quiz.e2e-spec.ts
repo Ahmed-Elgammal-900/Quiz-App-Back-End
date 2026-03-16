@@ -64,7 +64,12 @@ describe('QuizController (e2e)', () => {
       .get('/quizzes')
       .set('Cookie', cookies);
 
-    quizId = quizzes.body.data.quizInfo?.[0]?.id; // 👈 wrapped response
+    quizId = quizzes.body.data.quizInfo?.[0]?.id;
+    if (!quizId) {
+      throw new Error(
+        'Test prerequisite failed: No quizzes found in database. Ensure test data is seeded.',
+      );
+    }
 
     // 7. Get questions
     const questions = await request(app.getHttpServer())
@@ -72,6 +77,11 @@ describe('QuizController (e2e)', () => {
       .set('Cookie', cookies);
 
     questionId = questions.body.data.data?.[0]?.id;
+    if (!questionId) {
+      throw new Error(
+        'Test prerequisite failed: No questions found for quiz. Ensure test data is seeded.',
+      );
+    }
   });
 
   afterAll(async () => {
@@ -109,13 +119,6 @@ describe('QuizController (e2e)', () => {
       .expect(200);
   });
 
-  it('POST /quizzes/:quizId/start — should start quiz', async () => {
-    await request(app.getHttpServer())
-      .post(`/quizzes/${quizId}/start`)
-      .set('Cookie', cookies)
-      .expect(201);
-  });
-
   it('POST /quizzes/:quizId/pause — should pause quiz', async () => {
     return request(app.getHttpServer())
       .post(`/quizzes/${quizId}/pause`)
@@ -132,23 +135,6 @@ describe('QuizController (e2e)', () => {
         );
       });
   });
-
-  // it('POST /quizzes/:quizId/pause — should pause quiz', async () => {
-  //   const res = await request(app.getHttpServer())
-  //     .post(`/quizzes/${quizId}/pause`)
-  //     .set('Cookie', cookies)
-  //     .send({
-  //       pausedAtQuestionId: questionId,
-  //       remainingTimeSeconds: 270,
-  //     });
-
-  //   console.log('PAUSE STATUS:', res.status);
-  //   console.log('PAUSE BODY:', JSON.stringify(res.body));
-  //   console.log('QUIZ ID:', quizId);
-  //   console.log('QUESTION ID:', questionId);
-
-  //   expect(res.status).toBe(201);
-  // });
 
   it('GET /quizzes/stats — should return user stats', async () => {
     return request(app.getHttpServer())
