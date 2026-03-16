@@ -6,7 +6,7 @@ const mockQuizService = {
   getQuizzes: jest.fn(),
   getQuestionsByQuiz: jest.fn(),
   getAnswersByQuestion: jest.fn(),
-  getPasseddQuizzesNames: jest.fn(),
+  getPassedQuizzesNames: jest.fn(),
   getUserQuizAnswer: jest.fn(),
   getQuizProgress: jest.fn(),
   startQuiz: jest.fn(),
@@ -20,6 +20,7 @@ describe('QuizController', () => {
   let controller: QuizController;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [QuizController],
       providers: [{ provide: QuizService, useValue: mockQuizService }],

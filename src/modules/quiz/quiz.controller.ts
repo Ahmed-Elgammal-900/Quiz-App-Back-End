@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { QuizService } from './quiz.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
-import { PaginationDto } from './dto/paginiation.dto';
+import { PaginationDto } from './dto/pagination.dto';
 import { InsertProgressDto } from './dto/insert-progress.dto';
 import { PauseQuizDto } from './dto/pause-quiz.dto';
 

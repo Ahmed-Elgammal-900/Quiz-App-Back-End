@@ -15,7 +15,6 @@ import { User } from '../../user/entities/user.entity';
 @Entity('user_quiz_progress')
 @Unique(['userId', 'quizId'])
 @Index(['userId', 'status'])
-@Index(['userId', 'quizId'])
 export class UserQuizProgress {
   @PrimaryGeneratedColumn('uuid')
   id: string;

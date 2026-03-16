@@ -156,8 +156,8 @@ export class QuizService {
 
     if (progress?.passed) {
       await this.userQuizProgressRepo.update(
-        { userId, quizId, status: QuizProgressStatus.IN_PROGRESS },
-        { attemptAt: new Date() },
+        { userId, quizId },
+        { attemptAt: new Date(), status: QuizProgressStatus.IN_PROGRESS },
       );
       return;
     }
@@ -230,6 +230,10 @@ export class QuizService {
         }),
       ]);
 
+    if (totalQuestions === 0) {
+      throw new BadRequestException('Quiz has no questions');
+    }
+
     const score = (correctAnswers / totalQuestions) * 100;
     const isLastQuestion = answeredQuestions === totalQuestions;
     const passed = isLastQuestion && score === 100;
@@ -280,6 +284,13 @@ export class QuizService {
     pausedAtQuestionId: string,
     remainingTimeSeconds: number,
   ) {
+    const progress = await this.userQuizProgressRepo.findOne({
+      where: { userId, quizId },
+    });
+    if (!progress) {
+      throw new NotFoundException('Quiz not started yet');
+    }
+
     await this.userQuizProgressRepo.upsert(
       {
         userId,
@@ -333,13 +344,14 @@ export class QuizService {
    * @returns Paginated leaderboard with userId, name, passedQuizzes, averageScore, and totalScore
    */
   async getLeaderboard(page: number = 1, limit: number = 10) {
-    const total = await this.userQuizProgressRepo
+    const countResult = await this.userQuizProgressRepo
       .createQueryBuilder('progress')
+      .select('COUNT(DISTINCT progress.userId)', 'total')
       .innerJoin(User, 'user', 'user.id = progress.userId')
       .where('progress.passed = :passed', { passed: true })
-      .groupBy('progress.userId')
-      .addGroupBy('user.name')
-      .getCount();
+      .getRawOne();
+      
+    const total = parseInt(countResult?.total) || 0;
 
     const data = await this.userQuizProgressRepo
       .createQueryBuilder('progress')
