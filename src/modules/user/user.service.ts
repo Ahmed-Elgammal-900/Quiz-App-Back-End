@@ -238,4 +238,18 @@ export class UserService {
 
     await this.clearToken(TokenType.EMAIL_VERIFY, userId);
   }
+
+  /**
+   * Deletes a user by email address. Intended exclusively for e2e testing.
+   * Cleans up test users between runs to ensure a fresh state.
+   *
+   * @param email - The email address of the user to delete
+   * @returns Promise<void>
+   *
+   * @example
+   * await userService.deleteTestUser('test@email.com');
+   */
+  async deleteTestUser(email: string): Promise<void> {
+    await this.userRepository.delete({ email });
+  }
 }
