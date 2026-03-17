@@ -93,19 +93,22 @@ describe('QuizService', () => {
       expect(userQuizProgressRepo.update).not.toHaveBeenCalled();
     });
 
-    it('should only update attemptAt if user already passed', async () => {
+    it('should only update attemptAt and status if user already passed', async () => {
       userQuizProgressRepo.findOne.mockResolvedValue({ passed: true });
       userQuizProgressRepo.update.mockResolvedValue(null);
 
       await service.startQuiz('user-id', 'quiz-id');
 
+      // Service calls update({ userId, quizId }, { attemptAt, status }) — no status in where clause
       expect(userQuizProgressRepo.update).toHaveBeenCalledWith(
         {
           userId: 'user-id',
           quizId: 'quiz-id',
-          status: QuizProgressStatus.IN_PROGRESS,
         },
-        expect.objectContaining({ attemptAt: expect.any(Date) }),
+        expect.objectContaining({
+          attemptAt: expect.any(Date),
+          status: QuizProgressStatus.IN_PROGRESS,
+        }),
       );
 
       expect(userQuizProgressRepo.upsert).not.toHaveBeenCalled();
@@ -113,17 +116,31 @@ describe('QuizService', () => {
   });
 
   describe('insertUserProgress', () => {
+    it('should throw NotFoundException if question does not belong to quiz', async () => {
+      userQuizProgressRepo.findOne.mockResolvedValue({ passed: false });
+      // questionRepo.findOne returns null → question not found
+      questionRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.insertUserProgress('user-id', 'quiz-id', 'q-id', 'a-id'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
     it('should throw NotFoundException if answer not found', async () => {
       userQuizProgressRepo.findOne.mockResolvedValue({ passed: false });
-      answerRepo.findOne.mockResolvedValue(null);
+      questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
+      answerRepo.findOne.mockResolvedValue(null); // answer not found
+
       await expect(
         service.insertUserProgress('user-id', 'quiz-id', 'q-id', 'a-id'),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if quiz not started', async () => {
-      userQuizProgressRepo.findOne.mockResolvedValue(null);
+      userQuizProgressRepo.findOne.mockResolvedValue(null); // no progress
+      questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
       answerRepo.findOne.mockResolvedValue({ isCorrect: true });
+
       await expect(
         service.insertUserProgress('user-id', 'quiz-id', 'q-id', 'a-id'),
       ).rejects.toThrow(BadRequestException);
@@ -131,12 +148,13 @@ describe('QuizService', () => {
 
     it('should calculate score correctly', async () => {
       userQuizProgressRepo.findOne.mockResolvedValue({ passed: false });
+      questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
       answerRepo.findOne.mockResolvedValue({ isCorrect: true });
       userQuizAnswerRepo.upsert.mockResolvedValue(null);
       questionRepo.count.mockResolvedValue(10);
       userQuizAnswerRepo.count
-        .mockResolvedValueOnce(5)
-        .mockResolvedValueOnce(4);
+        .mockResolvedValueOnce(5) // answeredQuestions
+        .mockResolvedValueOnce(4); // correctAnswers
 
       const result = await service.insertUserProgress(
         'user-id',
@@ -152,12 +170,13 @@ describe('QuizService', () => {
 
     it('should mark as completed and passed on last correct question', async () => {
       userQuizProgressRepo.findOne.mockResolvedValue({ passed: false });
+      questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
       answerRepo.findOne.mockResolvedValue({ isCorrect: true });
       userQuizAnswerRepo.upsert.mockResolvedValue(null);
       questionRepo.count.mockResolvedValue(10);
       userQuizAnswerRepo.count
-        .mockResolvedValueOnce(10)
-        .mockResolvedValueOnce(10);
+        .mockResolvedValueOnce(10) // answeredQuestions
+        .mockResolvedValueOnce(10); // correctAnswers
 
       const result = await service.insertUserProgress(
         'user-id',
@@ -177,12 +196,13 @@ describe('QuizService', () => {
 
     it('should not update score if user already passed', async () => {
       userQuizProgressRepo.findOne.mockResolvedValue({ passed: true });
+      questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
       answerRepo.findOne.mockResolvedValue({ isCorrect: true });
       userQuizAnswerRepo.upsert.mockResolvedValue(null);
       questionRepo.count.mockResolvedValue(10);
       userQuizAnswerRepo.count
-        .mockResolvedValueOnce(10)
-        .mockResolvedValueOnce(10);
+        .mockResolvedValueOnce(10) // answeredQuestions
+        .mockResolvedValueOnce(10); // correctAnswers
 
       await service.insertUserProgress('user-id', 'quiz-id', 'q-id', 'a-id');
 
@@ -195,13 +215,48 @@ describe('QuizService', () => {
 
   describe('pauseQuiz', () => {
     it('should save paused status with remaining time', async () => {
+      // Must mock findOne to return a progress object, otherwise service throws NotFoundException
+      userQuizProgressRepo.findOne.mockResolvedValue({
+        userId: 'user-id',
+        quizId: 'quiz-id',
+        status: QuizProgressStatus.IN_PROGRESS,
+      });
       userQuizProgressRepo.upsert.mockResolvedValue(null);
+
       await service.pauseQuiz('user-id', 'quiz-id', 'q-id', 270);
+
       expect(userQuizProgressRepo.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           status: QuizProgressStatus.PAUSED,
           remainingTimeSeconds: 270,
           pausedAtQuestionId: 'q-id',
+        }),
+        ['userId', 'quizId'],
+      );
+    });
+
+    it('should throw NotFoundException if quiz not started', async () => {
+      userQuizProgressRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.pauseQuiz('user-id', 'quiz-id', 'q-id', 270),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should save timeout status when remainingTimeSeconds is 0', async () => {
+      userQuizProgressRepo.findOne.mockResolvedValue({
+        userId: 'user-id',
+        quizId: 'quiz-id',
+        status: QuizProgressStatus.IN_PROGRESS,
+      });
+      userQuizProgressRepo.upsert.mockResolvedValue(null);
+
+      await service.pauseQuiz('user-id', 'quiz-id', 'q-id', 0);
+
+      expect(userQuizProgressRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: QuizProgressStatus.TIMEOUT,
+          remainingTimeSeconds: 0,
         }),
         ['userId', 'quizId'],
       );
