@@ -35,7 +35,13 @@ describe('UserController (e2e)', () => {
     const register = await request(app.getHttpServer())
       .post('/auth/signup')
       .send(TEST_USER);
+
     expect(register.status).toBe(201);
+
+    expect(register.body).toBeDefined();
+    expect(register.body.data).toBeDefined();
+    expect(register.body.data.userId).toBeDefined();
+
     const userId = register.body.data.userId;
     const authService = module.get(AuthService);
     await authService.forceVerifyUser(userId);
@@ -58,9 +64,11 @@ describe('UserController (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
     app.use(cookieParser());
     await app.init();
+
     const userService = module.get(UserService);
     await userService.deleteTestUser(TEST_USER.email);
     await userService.deleteTestDeletedEmail(TEST_USER.email);
+
     await registerAndVerify();
     cookies = await loginAndGetCookies();
   });
@@ -92,11 +100,16 @@ describe('UserController (e2e)', () => {
         'Account deleted successfully',
       );
 
-      cookies = res.headers['set-cookie'];
-      const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
+      const clearedSetCookie = res.headers['set-cookie'];
+      expect(clearedSetCookie).toBeDefined();
+      const cookieArray = Array.isArray(clearedSetCookie)
+        ? clearedSetCookie
+        : [clearedSetCookie];
 
       expect(cookieArray.some((c) => c.includes('access_token=;'))).toBe(true);
       expect(cookieArray.some((c) => c.includes('refresh_token=;'))).toBe(true);
+
+      cookies = clearedSetCookie;
     });
 
     it('should fail after deletion — token revoked', async () => {
