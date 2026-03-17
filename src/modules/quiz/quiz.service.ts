@@ -205,12 +205,14 @@ export class QuizService {
       where: { userId, quizId },
     });
 
-    const questionExists = await this.questionRepo.existsBy({
-      id: questionId,
-      quizId,
+    const questionExists = await this.questionRepo.findOne({
+      where: {
+        id: questionId,
+        quizId,
+      },
     });
     if (!questionExists) {
-      throw new BadRequestException('Question does not belong to this quiz');
+      throw new NotFoundException('Question does not belong to this quiz');
     }
 
     const answer = await this.answerRepo.findOne({
@@ -362,7 +364,6 @@ export class QuizService {
       .innerJoin(User, 'user', 'user.id = progress.userId')
       .where('progress.passed = :passed', { passed: true })
       .getRawOne();
-
     const total = parseInt(countResult?.total) || 0;
 
     const data = await this.userQuizProgressRepo
