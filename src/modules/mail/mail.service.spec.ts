@@ -4,13 +4,11 @@ import { MailService } from './mail.service';
 import * as nodemailer from 'nodemailer';
 import { render } from '@react-email/components';
 
-// ── Mocks ──────────────────────────────────────────────────────────────────
-
 jest.mock('nodemailer');
 jest.mock('@react-email/components', () => ({ render: jest.fn() }));
 jest.mock('./templates/reset-password', () => ({
   __esModule: true,
-  default: jest.fn((props) => props), // returns props so render() receives something
+  default: jest.fn((props) => props),
 }));
 jest.mock('./templates/email-verification', () => ({
   __esModule: true,
@@ -19,8 +17,6 @@ jest.mock('./templates/email-verification', () => ({
 
 const mockSendMail = jest.fn();
 const mockCreateTransport = nodemailer.createTransport as jest.Mock;
-
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 const VALID_CONFIG: Record<string, string> = {
   GMAIL_USER: 'test@gmail.com',
@@ -35,7 +31,9 @@ function buildConfigService(overrides: Partial<Record<string, string>> = {}) {
   };
 }
 
-async function buildService(configService: ReturnType<typeof buildConfigService>) {
+async function buildService(
+  configService: ReturnType<typeof buildConfigService>,
+) {
   mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
 
   const module: TestingModule = await Test.createTestingModule({
@@ -48,15 +46,11 @@ async function buildService(configService: ReturnType<typeof buildConfigService>
   return module.get<MailService>(MailService);
 }
 
-// ── Tests ──────────────────────────────────────────────────────────────────
-
 describe('MailService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (render as jest.Mock).mockResolvedValue('<html>email</html>');
   });
-
-  // ── Constructor ────────────────────────────────────────────────────────
 
   describe('constructor', () => {
     it('should initialise and create a nodemailer transporter with valid config', async () => {
@@ -78,11 +72,16 @@ describe('MailService', () => {
       const module = Test.createTestingModule({
         providers: [
           MailService,
-          { provide: ConfigService, useValue: buildConfigService(overrides as any) },
+          {
+            provide: ConfigService,
+            useValue: buildConfigService(overrides as any),
+          },
         ],
       });
 
-      await expect(module.compile()).rejects.toThrow('Mail configuration is incomplete');
+      await expect(module.compile()).rejects.toThrow(
+        'Mail configuration is incomplete',
+      );
     });
 
     it('should throw when FRONT_END_ORIGIN is not a valid URL', async () => {
@@ -104,8 +103,6 @@ describe('MailService', () => {
     });
   });
 
-  // ── sendResetPasswordEmail ─────────────────────────────────────────────
-
   describe('sendResetPasswordEmail', () => {
     let service: MailService;
 
@@ -116,7 +113,11 @@ describe('MailService', () => {
     it('should send a reset-password email with a correctly formed reset URL', async () => {
       mockSendMail.mockResolvedValue({ messageId: 'abc123' });
 
-      await service.sendResetPasswordEmail('user@example.com', 'tok_abc', 'Alice');
+      await service.sendResetPasswordEmail(
+        'user@example.com',
+        'tok_abc',
+        'Alice',
+      );
 
       expect(render).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -140,10 +141,16 @@ describe('MailService', () => {
     });
 
     it('should return the result from sendMail', async () => {
-      const mockResult = { messageId: 'abc123', accepted: ['user@example.com'] };
+      const mockResult = {
+        messageId: 'abc123',
+        accepted: ['user@example.com'],
+      };
       mockSendMail.mockResolvedValue(mockResult);
 
-      const result = await service.sendResetPasswordEmail('user@example.com', 'tok_abc');
+      const result = await service.sendResetPasswordEmail(
+        'user@example.com',
+        'tok_abc',
+      );
 
       expect(result).toEqual(mockResult);
     });
@@ -174,8 +181,6 @@ describe('MailService', () => {
       ).rejects.toThrow('Failed to send mail: raw string error');
     });
   });
-
-  // ── sendOtpEmail ───────────────────────────────────────────────────────
 
   describe('sendOtpEmail', () => {
     let service: MailService;
