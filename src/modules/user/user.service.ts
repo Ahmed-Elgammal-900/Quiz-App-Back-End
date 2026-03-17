@@ -255,4 +255,18 @@ export class UserService {
     }
     await this.userRepository.delete({ email });
   }
+
+  /**
+   * Deletes a deleted user record by email. **Test environment only.**
+   * Cleans up deleted test users at the start of a test to ensure nothing blocks user registration.
+   *
+   * @param email - The email of the deleted user record to remove.
+   * @throws {Error} If called outside of the test environment.
+   */
+  async deleteTestDeletedEmail(email: string): Promise<void> {
+    if (!(process.env.NODE_ENV === 'test')) {
+      throw new Error('deleteTestDeletedEmail only in test environment');
+    }
+    await this.deletedUserRepository.delete({ email });
+  }
 }
