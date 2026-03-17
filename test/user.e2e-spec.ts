@@ -14,8 +14,8 @@ describe('UserController (e2e)', () => {
 
   const TEST_USER = {
     name: 'Test User',
-    email: 'new-user-delete-test@email.com',
-    password: 'Tyfj8f2@d1hjdf',
+    email: 'new-user-test@email.com',
+    password: 'Tyfj8f2@d1hkof',
   };
 
   const loginAndGetCookies = async (): Promise<string> => {
