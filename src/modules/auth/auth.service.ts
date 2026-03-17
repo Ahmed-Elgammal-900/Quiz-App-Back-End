@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,7 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import { GoogleDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import * as crypto from 'crypto';
-import { MailService } from 'src/modules/mail/mail.service';
+import { MailService } from '../mail/mail.service';
 import { UserService } from '../user/user.service';
 import { UpdatePasswordDto } from './dto/change-password.dto';
 import {
@@ -63,7 +64,7 @@ export class AuthService {
     const user = await this.userService.findOrCreateGoogleUser(googleDto);
 
     if (!user.isEmailVerified) {
-      await this.sendOtp(user.id, user.email, user.name);
+      await this.sendOtp(user.id, user.email, user.name, true);
     }
 
     return {
@@ -102,7 +103,7 @@ export class AuthService {
     }
 
     if (!user.isEmailVerified) {
-      await this.sendOtp(user.id, user.email, user.name);
+      await this.sendOtp(user.id, user.email, user.name, true);
     }
 
     return user;
@@ -247,7 +248,7 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('user not found');
     }
-    
+
     return {
       id: user.id,
       email: user.email,
@@ -287,7 +288,12 @@ export class AuthService {
    * @returns A success message object
    * @throws {BadRequestException} If called again within the 60-second cooldown window
    */
-  async sendOtp(userId: string, email: string, name?: string) {
+  async sendOtp(
+    userId: string,
+    email: string,
+    name?: string,
+    isFromLogin: boolean = false,
+  ) {
     const existing = await this.userService.getToken(
       TokenType.EMAIL_VERIFY,
       userId,
@@ -295,13 +301,16 @@ export class AuthService {
 
     if (existing?.lastSentAt) {
       const seconds = (Date.now() - existing.lastSentAt.getTime()) / 1000;
-      if (seconds < 60) {
+      if (seconds < 60 && !isFromLogin) {
         throw new BadRequestException(
           `Wait ${Math.ceil(60 - seconds)}s before resending`,
         );
       }
-    }
 
+      if (seconds < 60 && isFromLogin) {
+        return { message: 'OTP already sent' };
+      }
+    }
     const otp = this.generateOtp();
     const hashedOtp = await bcrypt.hash(otp, HASH_SALT_ROUNDS);
     const expiresAt = new Date(Date.now() + OTP_EXPIRES_IN_MS);
@@ -365,6 +374,49 @@ export class AuthService {
   }
 
   /**
+   * Forces email verification for a user, bypassing the OTP flow.
+   * Intended exclusively for e2e testing — throws in non-test environments.
+   *
+   * @param userId - The ID of the user to verify
+   * @returns Promise<void>
+   * @throws {ForbiddenException} If called outside of the test environment
+   *
+   * @example
+   * // In e2e test beforeAll
+   * const authService = module.get(AuthService);
+   * await authService.forceVerifyUser(userId);
+   */
+  async forceVerifyUser(userId: string): Promise<void> {
+    if (process.env.NODE_ENV !== 'test') {
+      throw new ForbiddenException('Only available in test environment');
+    }
+    await this.userService.updateUser(userId, { isEmailVerified: true });
+  }
+
+  /**
+   * Deletes a user from the deleted users table by email. **Test environment only.**
+   * Use when cleaning up soft-deleted/blacklisted emails before re-registering in e2e tests.
+   *
+   * @param email - The email address to remove from the deleted users table
+   * @returns Promise<void>
+   * @throws {ForbiddenException} If called outside of the test environment
+   *
+   * @example
+   * await authService.deleteTestUser('test@email.com', true);
+   */
+  async deleteTestUser(email: string, fromDeleted = false): Promise<void> {
+    if (process.env.NODE_ENV !== 'test') {
+      throw new ForbiddenException('Only available in test environment');
+    }
+
+    if (fromDeleted) {
+      await this.userService.deleteTestDeletedEmail(email);
+    } else {
+      await this.userService.deleteTestUser(email);
+    }
+  }
+
+  /**
    * Generates a new access token and refresh token pair for a user.
    * Hashes and stores the refresh token in the database.
    *
@@ -379,7 +431,7 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get('JWT_ACCESS_SECRET'),
+      secret: this.configService.get('JWT_SECRET'),
       expiresIn: ACCESS_TOKEN_TIME,
     });
 

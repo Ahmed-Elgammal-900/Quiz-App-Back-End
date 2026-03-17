@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { UserService } from 'src/modules/user/user.service';
+import { UserService } from '../../user/user.service';
 import { Request } from 'express';
 import { TokenType } from '../constants/token-type.constant';
 import * as crypto from 'crypto';
@@ -52,6 +52,10 @@ export class JwtRefreshStrategy extends PassportStrategy(
     if (!token) throw new UnauthorizedException('Invalid refresh token');
     if (token.expiresAt < new Date())
       throw new UnauthorizedException('Refresh token expired');
+
+    if (!payload.isEmailVerified) {
+      throw new ForbiddenException('Please verify your email to continue');
+    }
 
     return {
       id: payload.sub,
