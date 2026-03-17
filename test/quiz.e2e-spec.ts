@@ -27,14 +27,12 @@ describe('QuizController (e2e)', () => {
 
     app = module.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
-    app.use(cookieParser()); // 👈 required for cookie auth
+    app.use(cookieParser());
     await app.init();
 
-    // 1. Clean up existing test user
     const authService = module.get(AuthService);
     await authService.deleteTestUser('test@email.com');
 
-    // 2. Register
     const register = await request(app.getHttpServer())
       .post('/auth/signup')
       .send({
@@ -43,23 +41,19 @@ describe('QuizController (e2e)', () => {
         password: 'Tyfj8f2@d1hjdf',
       });
 
-    const userId = register.body.data.userId; // 👈 wrapped response
+    const userId = register.body.data.userId;
 
-    // 3. Force verify
     await authService.forceVerifyUser(userId);
 
-    // 4. Login
     const login = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'test@email.com', password: 'Tyfj8f2@d1hjdf' });
 
-    // 5. Extract cookies
     const setCookieHeader = login.headers['set-cookie'];
     cookies = (
       Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader]
     ).join('; ');
 
-    // 6. Get quizzes
     const quizzes = await request(app.getHttpServer())
       .get('/quizzes')
       .set('Cookie', cookies);
@@ -71,7 +65,6 @@ describe('QuizController (e2e)', () => {
       );
     }
 
-    // 7. Get questions
     const questions = await request(app.getHttpServer())
       .get(`/quizzes/${quizId}/questions`)
       .set('Cookie', cookies);
