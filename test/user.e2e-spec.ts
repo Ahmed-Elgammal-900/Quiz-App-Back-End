@@ -58,9 +58,10 @@ describe('UserController (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
     app.use(cookieParser());
     await app.init();
-
+    const userService = module.get(UserService);
+    await userService.deleteTestUser(TEST_USER.email);
+    await userService.deleteTestDeletedEmail(TEST_USER.email);
     await registerAndVerify();
-
     cookies = await loginAndGetCookies();
   });
 
