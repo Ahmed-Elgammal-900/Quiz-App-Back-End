@@ -64,7 +64,7 @@ export class AuthService {
     const user = await this.userService.findOrCreateGoogleUser(googleDto);
 
     if (!user.isEmailVerified) {
-      await this.sendOtp(user.id, user.email, user.name);
+      await this.sendOtp(user.id, user.email, user.name, true);
     }
 
     return {
@@ -103,7 +103,7 @@ export class AuthService {
     }
 
     if (!user.isEmailVerified) {
-      await this.sendOtp(user.id, user.email, user.name);
+      await this.sendOtp(user.id, user.email, user.name, true);
     }
 
     return user;
@@ -288,7 +288,12 @@ export class AuthService {
    * @returns A success message object
    * @throws {BadRequestException} If called again within the 60-second cooldown window
    */
-  async sendOtp(userId: string, email: string, name?: string) {
+  async sendOtp(
+    userId: string,
+    email: string,
+    name?: string,
+    isFromLogin: boolean = false,
+  ) {
     const existing = await this.userService.getToken(
       TokenType.EMAIL_VERIFY,
       userId,
@@ -296,13 +301,16 @@ export class AuthService {
 
     if (existing?.lastSentAt) {
       const seconds = (Date.now() - existing.lastSentAt.getTime()) / 1000;
-      if (seconds < 60) {
+      if (seconds < 60 && !isFromLogin) {
         throw new BadRequestException(
           `Wait ${Math.ceil(60 - seconds)}s before resending`,
         );
       }
-    }
 
+      if (seconds < 60 && isFromLogin) {
+        return { message: 'OTP already sent' };
+      }
+    }
     const otp = this.generateOtp();
     const hashedOtp = await bcrypt.hash(otp, HASH_SALT_ROUNDS);
     const expiresAt = new Date(Date.now() + OTP_EXPIRES_IN_MS);
