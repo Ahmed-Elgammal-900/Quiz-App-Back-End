@@ -394,24 +394,26 @@ export class AuthService {
   }
 
   /**
-   * Deletes a test user by email, bypassing business logic.
-   * Intended exclusively for e2e testing — throws in non-test environments.
-   * Delegates to UserService.deleteTestUser internally.
+   * Deletes a user from the deleted users table by email. **Test environment only.**
+   * Use when cleaning up soft-deleted/blacklisted emails before re-registering in e2e tests.
    *
-   * @param email - The email address of the user to delete
+   * @param email - The email address to remove from the deleted users table
    * @returns Promise<void>
    * @throws {ForbiddenException} If called outside of the test environment
    *
    * @example
-   * // In e2e test beforeAll — clean up before registering
-   * const authService = module.get(AuthService);
-   * await authService.deleteTestUser('test@email.com');
+   * await authService.deleteTestUser('test@email.com', true);
    */
-  async deleteTestUser(email: string): Promise<void> {
+  async deleteTestUser(email: string, fromDeleted = false): Promise<void> {
     if (process.env.NODE_ENV !== 'test') {
       throw new ForbiddenException('Only available in test environment');
     }
-    await this.userService.deleteTestUser(email);
+
+    if (fromDeleted) {
+      await this.userService.deleteTestDeletedEmail(email);
+    } else {
+      await this.userService.deleteTestUser(email);
+    }
   }
 
   /**
