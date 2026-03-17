@@ -24,7 +24,13 @@ const VALID_CONFIG: Record<string, string> = {
   FRONT_END_ORIGIN: 'https://quizzer.app',
 };
 
-function buildConfigService(overrides: Partial<Record<string, string>> = {}) {
+type MailConfig = {
+  GMAIL_USER?: string;
+  GMAIL_APP_PASSWORD?: string;
+  FRONT_END_ORIGIN?: string;
+};
+
+function buildConfigService(overrides: Partial<MailConfig> = {}) {
   const config = { ...VALID_CONFIG, ...overrides };
   return {
     get: jest.fn((key: string) => config[key] ?? undefined),
@@ -74,7 +80,7 @@ describe('MailService', () => {
           MailService,
           {
             provide: ConfigService,
-            useValue: buildConfigService(overrides as any),
+            useValue: buildConfigService(overrides),
           },
         ],
       });
