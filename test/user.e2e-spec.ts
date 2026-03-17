@@ -5,7 +5,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { MailService } from '../src/modules/mail/mail.service';
-import { UserService } from 'src/modules/user/user.service';
+import { UserService } from '../src/modules/user/user.service';
 
 describe('UserController (e2e)', () => {
   let app: INestApplication;
@@ -23,7 +23,7 @@ describe('UserController (e2e)', () => {
       .post('/auth/login')
       .send({ email: TEST_USER.email, password: TEST_USER.password });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     const setCookieHeader = res.headers['set-cookie'];
     expect(setCookieHeader).toBeDefined();
     return (

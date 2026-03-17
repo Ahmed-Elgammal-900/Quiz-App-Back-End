@@ -22,7 +22,7 @@ describe('AppController (e2e)', () => {
       .expect(200)
       .expect(({ body }) => {
         expect(body.success).toBe(true);
-        expect(body.data).toBe('Welcome to Quizzer');
+        expect(body.data).toBe('Welcome to Quizzer API');
         expect(body.timestamp).toBeDefined();
       });
   });
