@@ -28,6 +28,7 @@ const mockUserService = {
   verifyUser: jest.fn(),
   incrementAttempts: jest.fn(),
   deleteTestUser: jest.fn(),
+  deleteTestDeletedEmail: jest.fn(),
 };
 
 const mockMailService = {
@@ -61,7 +62,7 @@ describe('AuthService', () => {
     jest.clearAllMocks();
   });
 
-  // ─── createUser ───────────────────────────────────────────────────────────
+  // createUser
 
   describe('createUser', () => {
     it('should create user and send OTP', async () => {
@@ -83,7 +84,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── validateLocalUser ────────────────────────────────────────────────────
+  // validateLocalUser
 
   describe('validateLocalUser', () => {
     it('should return user on valid credentials', async () => {
@@ -146,7 +147,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── validateGoogleUser ───────────────────────────────────────────────────
+  // validateGoogleUser
 
   describe('validateGoogleUser', () => {
     it('should return user info for valid google user', async () => {
@@ -185,7 +186,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── verifyOtp ────────────────────────────────────────────────────────────
+  // verifyOtp
 
   describe('verifyOtp', () => {
     it('should verify OTP and return user', async () => {
@@ -254,7 +255,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── resendOtp ────────────────────────────────────────────────────────────
+  // resendOtp
 
   describe('resendOtp', () => {
     it('should resend OTP for unverified user', async () => {
@@ -292,7 +293,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── changePassword ───────────────────────────────────────────────────────
+  // changePassword
 
   describe('changePassword', () => {
     it('should change password successfully', async () => {
@@ -301,8 +302,8 @@ describe('AuthService', () => {
         password: 'hashed',
       });
       (bcrypt.compare as jest.Mock)
-        .mockResolvedValueOnce(true) // current password matches
-        .mockResolvedValueOnce(false); // new password is different
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
       (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
 
       await service.changePassword('user-123', {
@@ -332,8 +333,8 @@ describe('AuthService', () => {
     it('should throw if new password is same as old', async () => {
       mockUserService.findOne.mockResolvedValue({ password: 'hashed' });
       (bcrypt.compare as jest.Mock)
-        .mockResolvedValueOnce(true) // current matches
-        .mockResolvedValueOnce(true); // new is same
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true);
 
       await expect(
         service.changePassword('user-123', {
@@ -345,7 +346,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── logout ───────────────────────────────────────────────────────────────
+  // logout
 
   describe('logout', () => {
     it('should logout user and clear refresh token', async () => {
@@ -366,7 +367,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── forceVerifyUser ──────────────────────────────────────────────────────
+  // forceVerifyUser
 
   describe('forceVerifyUser', () => {
     it('should force verify user in test environment', async () => {
@@ -391,7 +392,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── deleteTestUser ───────────────────────────────────────────────────────
+  // deleteTestUser
 
   describe('deleteTestUser', () => {
     it('should delete user in test environment', async () => {
@@ -414,9 +415,19 @@ describe('AuthService', () => {
 
       process.env.NODE_ENV = 'test';
     });
+
+    it('should delete from deleted-users table when fromDeleted=true', async () => {
+      mockUserService.deleteTestDeletedEmail.mockResolvedValue(undefined);
+
+      await service.deleteTestUser('test@test.com', true);
+
+      expect(mockUserService.deleteTestDeletedEmail).toHaveBeenCalledWith(
+        'test@test.com',
+      );
+    });
   });
 
-  // ─── generateTokens ───────────────────────────────────────────────────────
+  // generateTokens
 
   describe('generateTokens', () => {
     it('should generate access and refresh tokens', async () => {
@@ -434,7 +445,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── forgotPassword ───────────────────────────────────────────────────────
+  // forgotPassword
 
   describe('forgotPassword', () => {
     it('should return generic message if user not found', async () => {

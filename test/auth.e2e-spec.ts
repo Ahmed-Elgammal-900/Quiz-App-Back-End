@@ -38,6 +38,7 @@ describe('AuthController (e2e)', () => {
 
     const authService = module.get(AuthService);
     await authService.deleteTestUser(TEST_USER.email);
+    await authService.deleteTestUser(TEST_USER.email, true);
   });
 
   afterAll(async () => {
