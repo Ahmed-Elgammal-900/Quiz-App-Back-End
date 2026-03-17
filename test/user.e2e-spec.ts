@@ -124,7 +124,7 @@ describe('UserController (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/auth/signup')
         .send(TEST_USER);
-
+      expect(res.body.message).toBe('this account was deleted');
       expect(res.status).toBe(409);
     });
 
@@ -132,7 +132,7 @@ describe('UserController (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email: TEST_USER.email, password: TEST_USER.password });
-
+      expect(res.body.message).toBe('this account was deleted');
       expect(res.status).toBe(400);
     });
   });
