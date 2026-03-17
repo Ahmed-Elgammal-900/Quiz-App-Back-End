@@ -23,7 +23,9 @@ describe('UserController (e2e)', () => {
       .post('/auth/login')
       .send({ email: TEST_USER.email, password: TEST_USER.password });
 
+    expect(res.status).toBe(200);
     const setCookieHeader = res.headers['set-cookie'];
+    expect(setCookieHeader).toBeDefined();
     return (
       Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader]
     ).join('; ');
