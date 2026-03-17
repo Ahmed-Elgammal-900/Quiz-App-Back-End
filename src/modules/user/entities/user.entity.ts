@@ -1,6 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { Token } from 'src/modules/user/entities/token.entity';
+import { Token } from '../../user/entities/token.entity';
 import { Provider } from '../constants/provider.constant';
+import { UserQuizProgress } from '../../quiz/entities/user-progress.entity';
+import { UserQuizAnswer } from '../../quiz/entities/user-quiz-answer.entity';
 
 @Entity()
 export class User {
@@ -30,4 +32,14 @@ export class User {
 
   @OneToMany(() => Token, (token) => token.user)
   tokens: Token[];
+
+  @OneToMany(() => UserQuizProgress, (progress) => progress.user, {
+    cascade: true,
+  })
+  quizProgresses: UserQuizProgress[];
+
+  @OneToMany(() => UserQuizAnswer, (answer) => answer.user, {
+    cascade: true,
+  })
+  quizAnswers: UserQuizAnswer[];
 }

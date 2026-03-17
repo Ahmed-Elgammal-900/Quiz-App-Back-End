@@ -8,6 +8,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { UserModule } from './modules/user/user.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform-response.interceptor';
+import { QuizModule } from './modules/quiz/quiz.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -23,7 +25,9 @@ import { TransformInterceptor } from './common/interceptors/transform-response.i
     Database,
     MailModule,
     UserModule,
+    QuizModule,
   ],
+  controllers:[AppController],
   providers: [
     {
       provide: APP_GUARD,
