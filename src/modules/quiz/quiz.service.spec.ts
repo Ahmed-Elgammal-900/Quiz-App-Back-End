@@ -99,7 +99,6 @@ describe('QuizService', () => {
 
       await service.startQuiz('user-id', 'quiz-id');
 
-      // Service calls update({ userId, quizId }, { attemptAt, status }) — no status in where clause
       expect(userQuizProgressRepo.update).toHaveBeenCalledWith(
         {
           userId: 'user-id',
@@ -118,7 +117,6 @@ describe('QuizService', () => {
   describe('insertUserProgress', () => {
     it('should throw NotFoundException if question does not belong to quiz', async () => {
       userQuizProgressRepo.findOne.mockResolvedValue({ passed: false });
-      // questionRepo.findOne returns null → question not found
       questionRepo.findOne.mockResolvedValue(null);
 
       await expect(
@@ -129,7 +127,7 @@ describe('QuizService', () => {
     it('should throw NotFoundException if answer not found', async () => {
       userQuizProgressRepo.findOne.mockResolvedValue({ passed: false });
       questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
-      answerRepo.findOne.mockResolvedValue(null); // answer not found
+      answerRepo.findOne.mockResolvedValue(null);
 
       await expect(
         service.insertUserProgress('user-id', 'quiz-id', 'q-id', 'a-id'),
@@ -137,7 +135,7 @@ describe('QuizService', () => {
     });
 
     it('should throw BadRequestException if quiz not started', async () => {
-      userQuizProgressRepo.findOne.mockResolvedValue(null); // no progress
+      userQuizProgressRepo.findOne.mockResolvedValue(null);
       questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
       answerRepo.findOne.mockResolvedValue({ isCorrect: true });
 
@@ -153,8 +151,8 @@ describe('QuizService', () => {
       userQuizAnswerRepo.upsert.mockResolvedValue(null);
       questionRepo.count.mockResolvedValue(10);
       userQuizAnswerRepo.count
-        .mockResolvedValueOnce(5) // answeredQuestions
-        .mockResolvedValueOnce(4); // correctAnswers
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(4);
 
       const result = await service.insertUserProgress(
         'user-id',
@@ -175,8 +173,8 @@ describe('QuizService', () => {
       userQuizAnswerRepo.upsert.mockResolvedValue(null);
       questionRepo.count.mockResolvedValue(10);
       userQuizAnswerRepo.count
-        .mockResolvedValueOnce(10) // answeredQuestions
-        .mockResolvedValueOnce(10); // correctAnswers
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(10);
 
       const result = await service.insertUserProgress(
         'user-id',
@@ -201,8 +199,8 @@ describe('QuizService', () => {
       userQuizAnswerRepo.upsert.mockResolvedValue(null);
       questionRepo.count.mockResolvedValue(10);
       userQuizAnswerRepo.count
-        .mockResolvedValueOnce(10) // answeredQuestions
-        .mockResolvedValueOnce(10); // correctAnswers
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(10);
 
       await service.insertUserProgress('user-id', 'quiz-id', 'q-id', 'a-id');
 
@@ -215,7 +213,6 @@ describe('QuizService', () => {
 
   describe('pauseQuiz', () => {
     it('should save paused status with remaining time', async () => {
-      // Must mock findOne to return a progress object, otherwise service throws NotFoundException
       userQuizProgressRepo.findOne.mockResolvedValue({
         userId: 'user-id',
         quizId: 'quiz-id',
