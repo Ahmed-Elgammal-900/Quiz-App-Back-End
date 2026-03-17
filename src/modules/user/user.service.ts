@@ -263,7 +263,7 @@ export class UserService {
    * @param email - The email of the deleted user record to remove.
    * @throws {Error} If called outside of the test environment.
    */
-  async deleteTestDeletedEmail(email: string) {
+  async deleteTestDeletedEmail(email: string): Promise<void> {
     if (!(process.env.NODE_ENV === 'test')) {
       throw new Error('deleteTestDeletedEmail only in test environment');
     }

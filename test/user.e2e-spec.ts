@@ -5,6 +5,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { MailService } from '../src/modules/mail/mail.service';
+import { UserService } from 'src/modules/user/user.service';
 
 describe('UserController (e2e)', () => {
   let app: INestApplication;
@@ -32,7 +33,7 @@ describe('UserController (e2e)', () => {
     const register = await request(app.getHttpServer())
       .post('/auth/signup')
       .send(TEST_USER);
-    console.log(register.body);
+    expect(register.status).toBe(201);
     const userId = register.body.data.userId;
     const authService = module.get(AuthService);
     await authService.forceVerifyUser(userId);
@@ -56,20 +57,19 @@ describe('UserController (e2e)', () => {
     app.use(cookieParser());
     await app.init();
 
-    // clean up, register and verify fresh user
-    const authService = module.get(AuthService);
-    await authService.deleteTestUser(TEST_USER.email);
-    await authService.deleteTestUser(TEST_USER.email, true);
     await registerAndVerify();
 
     cookies = await loginAndGetCookies();
   });
 
   afterAll(async () => {
+    const userService = module.get(UserService);
+    await userService.deleteTestUser(TEST_USER.email);
+    await userService.deleteTestDeletedEmail(TEST_USER.email);
     await app.close();
   });
 
-  // ─── DELETE /user/delete ──────────────────────────────────────────────────
+  // DELETE /user/delete
 
   describe('DELETE /user/delete', () => {
     it('should fail without auth', async () => {
@@ -90,10 +90,7 @@ describe('UserController (e2e)', () => {
       );
 
       cookies = res.headers['set-cookie'];
-      const clearedCookies = res.headers['set-cookie'];
-      const cookieArray = Array.isArray(clearedCookies)
-        ? clearedCookies
-        : [clearedCookies];
+      const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
 
       expect(cookieArray.some((c) => c.includes('access_token=;'))).toBe(true);
       expect(cookieArray.some((c) => c.includes('refresh_token=;'))).toBe(true);
