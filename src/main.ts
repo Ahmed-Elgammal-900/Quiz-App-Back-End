@@ -49,7 +49,7 @@ async function bootstrap() {
   );
 
   app.use(cookieParser());
-  // Swagger Config
+  // Swagger Config load locally to see swagger ui
   const config = new DocumentBuilder()
     .setTitle('Quizzer API')
     .setDescription('The Quizzer API documentation')
@@ -58,14 +58,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document, {
-    customCssUrl:
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui.min.css',
-    customJs: [
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-bundle.js',
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-standalone-preset.js',
-    ],
-  });
+  SwaggerModule.setup('docs', app, document);
   //
   await app.listen(process.env.PORT ?? 3000);
 }
