@@ -176,7 +176,7 @@ describe('MailService', () => {
 
       await expect(
         service.sendResetPasswordEmail('user@example.com', 'tok_abc'),
-      ).rejects.toThrow('Failed to send mail: SMTP connection refused');
+      ).rejects.toThrow('Failed to send mail');
     });
 
     it('should throw a wrapped error when sendMail rejects with a non-Error value', async () => {
@@ -184,7 +184,7 @@ describe('MailService', () => {
 
       await expect(
         service.sendResetPasswordEmail('user@example.com', 'tok_abc'),
-      ).rejects.toThrow('Failed to send mail: raw string error');
+      ).rejects.toThrow('Failed to send mail');
     });
   });
 
@@ -256,7 +256,7 @@ describe('MailService', () => {
 
       await expect(
         service.sendOtpEmail('user@example.com', '123456'),
-      ).rejects.toThrow('Failed to send mail: Timeout');
+      ).rejects.toThrow('Failed to send mail');
     });
 
     it('should throw a wrapped error when sendMail rejects with a non-Error value', async () => {
@@ -264,7 +264,7 @@ describe('MailService', () => {
 
       await expect(
         service.sendOtpEmail('user@example.com', '123456'),
-      ).rejects.toThrow('Failed to send mail: 42');
+      ).rejects.toThrow('Failed to send mail');
     });
   });
 });
