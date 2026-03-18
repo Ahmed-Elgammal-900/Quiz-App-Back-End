@@ -58,7 +58,7 @@ export class MailService {
    * to `FRONT_END_ORIGIN` and embedded in the `PasswordResetEmail` template.
    *
    * @param email - Recipient's email address.
-   * @param resetToken - Signed token that authorizes the password reset.
+   * @param resetToken - Raw reset token included in the reset URL (validated server-side via stored hash).
    * @param name - Optional display name used to personalize the email greeting.
    * @returns The Nodemailer send-mail result object.
    * @throws {Error} If the underlying SMTP transport fails to deliver the message.
@@ -86,8 +86,7 @@ export class MailService {
         html: emailHtml,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to send mail: ${message}`);
+      throw new Error(`Failed to send mail`);
     }
   }
 
