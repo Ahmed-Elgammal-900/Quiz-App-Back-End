@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 /**
  * Bootstraps the NestJS application.
@@ -13,6 +14,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
  * @throws {TypeError} If FRONT_END_ORIGIN is not a valid URL or uses a disallowed protocol
  */
 async function bootstrap() {
+  // env var check
   const frontEndOriginRaw = process.env.FRONT_END_ORIGIN;
   if (!frontEndOriginRaw) {
     throw new Error('FRONT_END_ORIGIN is required');
@@ -28,6 +30,7 @@ async function bootstrap() {
     throw new Error('FRONT_END_ORIGIN must be a valid absolute http(s) URL');
   }
 
+  // app init
   const app = await NestFactory.create(AppModule, {
     logger: ['verbose', 'debug', 'log', 'warn', 'error', 'fatal'],
   });
@@ -46,7 +49,17 @@ async function bootstrap() {
   );
 
   app.use(cookieParser());
+  // Swagger Config
+  const config = new DocumentBuilder()
+    .setTitle('Quizzer API')
+    .setDescription('The Quizzer API documentation')
+    .setVersion('1.0')
+    .addCookieAuth('access_token')
+    .build();
 
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+  //
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

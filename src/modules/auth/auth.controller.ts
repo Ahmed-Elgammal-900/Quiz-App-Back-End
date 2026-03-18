@@ -7,6 +7,13 @@ import {
   Res,
   Patch,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiCookieAuth,
+  ApiBody,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/signup.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -26,6 +33,7 @@ import {
   REFRESH_TOKEN_MAX_AGE,
 } from './constants/auth.constants';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -43,6 +51,19 @@ export class AuthController {
    */
   @Public()
   @Post('signup')
+  @ApiOperation({
+    summary: 'Register a new user',
+    description:
+      'Creates a new account and sends an OTP verification email. Tokens are not issued until email is verified.',
+  })
+  @ApiBody({ type: CreateAuthDto })
+  @ApiResponse({
+    status: 201,
+    description: 'User registered successfully',
+    schema: { example: { message: 'signup success', userId: 'uuid' } },
+  })
+  @ApiResponse({ status: 409, description: 'Email already exists' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
   async create(
     @Body() createAuthDto: CreateAuthDto,
     @Res({ passthrough: true }) _res: Response,
@@ -62,6 +83,24 @@ export class AuthController {
    */
   @Public()
   @Post('login')
+  @ApiOperation({
+    summary: 'Login with email & password',
+    description:
+      'Authenticates the user. Issues HttpOnly token cookies only if email is verified. Otherwise sends a new OTP.',
+  })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful or OTP required',
+    schema: {
+      example: {
+        message: 'login success',
+        userId: 'uuid',
+        isEmailVerified: true,
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -92,6 +131,11 @@ export class AuthController {
   @Public()
   @UseGuards(AuthGuard('google'))
   @Get('google')
+  @ApiOperation({
+    summary: 'Initiate Google OAuth2 login',
+    description: 'Redirects the user to Google consent screen.',
+  })
+  @ApiResponse({ status: 302, description: 'Redirects to Google OAuth' })
   googleLogin() {}
 
   /**
@@ -106,6 +150,22 @@ export class AuthController {
   @Public()
   @UseGuards(AuthGuard('google'))
   @Get('google/callback')
+  @ApiOperation({
+    summary: 'Google OAuth2 callback',
+    description:
+      'Handles redirect from Google. Issues token cookies if email is verified, otherwise sends OTP.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Google auth successful or OTP required',
+    schema: {
+      example: {
+        message: 'google auth success',
+        userId: 'uuid',
+        isEmailVerified: true,
+      },
+    },
+  })
   async googleCallback(
     @CurrentUser() user: UserResponse,
     @Res({ passthrough: true }) res: Response,
@@ -136,6 +196,18 @@ export class AuthController {
   @Public()
   @UseGuards(AuthGuard('jwt-refresh'))
   @Post('refresh-token')
+  @ApiOperation({
+    summary: 'Rotate access & refresh tokens',
+    description:
+      'Uses the refresh_token cookie to issue new token pair. Old refresh token is invalidated.',
+  })
+  @ApiCookieAuth('refresh_token')
+  @ApiResponse({
+    status: 200,
+    description: 'Tokens rotated successfully',
+    schema: { example: { message: 'success access token' } },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   async refresh(
     @CurrentUser() user: JwtUserWithRefresh,
     @Res({ passthrough: true }) res: Response,
@@ -158,6 +230,23 @@ export class AuthController {
    * @returns A success message
    */
   @Patch('change-password')
+  @ApiCookieAuth('access_token')
+  @ApiOperation({
+    summary: 'Change password',
+    description:
+      'Updates password for the authenticated user. Requires current password to be correct.',
+  })
+  @ApiBody({ type: UpdatePasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    schema: { example: { message: 'password changed successfully' } },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Current password is incorrect or new password is the same',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async changePassword(
     @CurrentUser() user: UserResponse,
     @Body() updatePasswordDto: UpdatePasswordDto,
@@ -178,25 +267,46 @@ export class AuthController {
    */
   @Public()
   @Post('forget-password')
+  @ApiOperation({
+    summary: 'Request password reset',
+    description:
+      'Sends a reset link to the provided email. Always returns the same response to prevent email enumeration.',
+  })
+  @ApiBody({ type: ForgetPasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Reset email sent (if account exists)',
+    schema: {
+      example: { message: 'If this email exists, a reset link has been sent' },
+    },
+  })
   async forgetPassword(
     @Body() updateAuthDto: ForgetPasswordDto,
     @Res({ passthrough: true }) _res: Response,
   ) {
-    const message = await this.authService.forgotPassword(updateAuthDto.email);
-
-    return message;
+    return await this.authService.forgotPassword(updateAuthDto.email);
   }
 
-  /**
-   * Resets the user's password using a valid reset token from their email.
-   * Issues new access and refresh token cookies on success.
-   *
-   * @route POST /auth/reset-password
-   * @access Public
-   * @returns A success message
-   */
   @Public()
   @Post('reset-password')
+  @ApiOperation({
+    summary: 'Reset password with token',
+    description:
+      'Resets password using the token from the reset email. Issues token cookies on success.',
+  })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successful',
+    schema: {
+      example: {
+        message: 'Password reset successful',
+        isEmailVerified: true,
+        userId: 'uuid',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or expired reset token' })
   async resetPassword(
     @Body() resetPasswordDto: ResetPasswordDto,
     @Res({ passthrough: true }) res: Response,
@@ -230,6 +340,18 @@ export class AuthController {
    */
   @Public()
   @Post('verify-email')
+  @ApiOperation({
+    summary: 'Verify email with OTP',
+    description:
+      'Verifies the user email using the OTP sent during signup. Issues token cookies on success.',
+  })
+  @ApiBody({ type: VerifyOtpDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified and tokens issued',
+    schema: { example: { message: 'email verified' } },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or expired OTP' })
   async verifyEmail(
     @Body() dto: VerifyOtpDto,
     @Res({ passthrough: true }) res: Response,
@@ -252,6 +374,17 @@ export class AuthController {
    */
   @Public()
   @Post('resend-otp')
+  @ApiOperation({
+    summary: 'Resend OTP',
+    description:
+      'Resends the verification OTP. Subject to a 60-second cooldown.',
+  })
+  @ApiBody({ type: ResendOtpDto })
+  @ApiResponse({ status: 200, description: 'OTP resent successfully' })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests — cooldown active',
+  })
   async resendOtp(@Body() dto: ResendOtpDto) {
     return await this.authService.resendOtp(dto.id);
   }
@@ -265,6 +398,17 @@ export class AuthController {
    * @returns A success message
    */
   @Post('logout')
+  @ApiOperation({
+    summary: 'Logout',
+    description: 'Revokes the refresh token and clears both token cookies.',
+  })
+  @ApiCookieAuth('access_token')
+  @ApiResponse({
+    status: 200,
+    description: 'Logged out successfully',
+    schema: { example: { message: 'logout success' } },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async logout(
     @CurrentUser() user: UserResponse,
     @Res({ passthrough: true }) res: Response,

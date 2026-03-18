@@ -1,10 +1,18 @@
 import { Controller, Delete, Res } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiCookieAuth,
+} from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { UserService } from './user.service';
 import { Response } from 'express';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { UserResponse } from '../auth/types/response-types';
-import { ConfigService } from '@nestjs/config';
 
+@ApiTags('User')
+@ApiCookieAuth('access_token')
 @Controller('user')
 export class UserController {
   constructor(
@@ -19,6 +27,17 @@ export class UserController {
    * @returns message confirming successful deletion
    */
   @Delete('delete')
+  @ApiOperation({
+    summary: 'Delete user account',
+    description:
+      'Deletes the authenticated user from the database and clears both token cookies.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User deleted successfully',
+    schema: { example: { message: 'User deleted successfully' } },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async remove(
     @CurrentUser() user: UserResponse,
     @Res({ passthrough: true }) res: Response,
