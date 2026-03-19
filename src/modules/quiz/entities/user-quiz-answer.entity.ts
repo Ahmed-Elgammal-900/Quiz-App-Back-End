@@ -4,7 +4,7 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-  Index,
+  Unique,
 } from 'typeorm';
 import { Quiz } from './quiz.entity';
 import { Answer } from './answer.entity';
@@ -12,7 +12,7 @@ import { Question } from './question.entity';
 import { User } from '../../user/entities/user.entity';
 
 @Entity('user_quiz_answers')
-@Index(['userId', 'quizId', 'questionId'])
+@Unique(['userId', 'quizId', 'questionId'])
 export class UserQuizAnswer {
   @PrimaryGeneratedColumn('uuid')
   id: string;
