@@ -1,98 +1,537 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+<h1 align="center" style="padding: 20px 0">🧠 Quizzer — Backend API ⏱️</h1>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![TypeORM](https://img.shields.io/badge/TypeORM-FE0902?style=for-the-badge&logo=typeorm&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
+![Passport](https://img.shields.io/badge/Passport-34E27A?style=for-the-badge&logo=passport&logoColor=white)
+![Jest](https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
+![Version](https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge)
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+> A scalable, production-ready REST API for the Quizzer platform, featuring secure JWT-based authentication, comprehensive quiz management, and a dynamic leaderboard system that enables users to evaluate their performance and engage in competitive gameplay
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Overview
 
-## Project setup
+**Quizzer** is a competitive quiz platform where users can register, take quizzes, and compete on a ranked leaderboard. This is a **backend API** built with NestJS, a progressive Node.js framework, providing a strongly-typed, modular architecture for handling authentication, quiz logic, scoring, and leaderboard ranking.
 
-```bash
-$ npm install
-```
+---
 
-## Compile and run the project
+## Features
 
-```bash
-# development
-$ npm run start
+- 🔐 **JWT Authentication** — Secure user registration, login, and protected routes via JSON Web Tokens stored in cookies
+- 📝 **Quiz Management** — Retrieve quizzes and questions with answers, and track user progress across the app
+- ✅ **Answer Submission & Scoring** — Submit answers and receive instant calculated scores
+- 🏆 **Leaderboard** — Ranked leaderboard tracking top-scoring users across the platform
+- 🛡️ **Guards** — NestJS Guards enforce access control on sensitive endpoints
+- 🧩 **Modular Architecture** — Clean separation of concerns using NestJS modules
+- 🔒 **Security Hardened** — Protection against CSRF, SQL injection, rate limiting, HTTP security headers, and CORS enforcement
 
-# watch mode
-$ npm run start:dev
+---
 
-# production mode
-$ npm run start:prod
-```
+## Getting Started
 
-## Run tests
+### Prerequisites
 
-```bash
-# unit tests
-$ npm run test
+Make sure you have the following installed:
 
-# e2e tests
-$ npm run test:e2e
+- [Node.js](https://nodejs.org/) v18+
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+- A running database instance (PostgreSQL)
 
-# test coverage
-$ npm run test:cov
-```
+### Installation
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. **Clone the repository**
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+git clone https://github.com/Ahmed-Elgammal-900/Quiz-App-Back-End.git
+cd Quiz-App-Back-End
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+2. **Install dependencies**
 
-## Resources
+```bash
+npm install
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### Environment Variables
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Create a `.env` file in the root directory:
 
-## Support
+```env
+DATABASE_URL=database_connection_url
+JWT_SECRET=jwt_secret
+JWT_REFRESH_SECRET=jwt_refresh_secret
+GOOGLE_CALLBACK_URL=google_callback_url (OAuth google auth)
+GOOGLE_CLIENT_ID=google_client_id (OAuth google auth)
+GOOGLE_CLIENT_SECRET=google_client_secret (OAuth google auth)
+FRONT_END_ORIGIN= front_end_url
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Running the Server
 
-## Stay in touch
+**Development mode** (with hot reload):
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+npm run start:dev
+```
+
+**Production build:**
+
+```bash
+npm run build
+npm run start:prod
+```
+
+The server will start at `http://localhost:3000` (or the port defined in your `.env`).
+
+---
+
+## 🧪 Testing
+
+This project includes a comprehensive test suite built with **Jest**
+
+### Running Test
+
+**unit test & integration test**
+
+```bash
+npn run test
+```
+
+**e2e test**
+
+```bash
+npm run test:e2e
+```
+
+> 📌 note: `.env` file should exist with configured var for test success
+
+---
+
+## ⚙️ CI/CD
+
+Automated pipeline configured with **GitHub Actions**
+
+---
+
+## Swagger Docs
+
+you will find docs on `http://localhost:3000/docs` (or the port defined in your `.env`)
+
+---
+
+## API Endpoints
+
+### Auth — `/auth`
+
+| Method | Endpoint           | Description                                                  | Auth Required |
+| ------ | ------------------ | ------------------------------------------------------------ | ------------- |
+| POST   | `/signup`          | Register a new user                                          | ❌            |
+| POST   | `/login`           | Login and receive a token                                    | ❌            |
+| GET    | `/google`          | redirect to google auth                                      | ❌            |
+| GET    | `/google/callback` | get google user info to login or signup                      | ❌            |
+| POST   | `/refresh-token`   | rotate access_token and refresh_token                        | ✅            |
+| PATCH  | `/change-password` | change user password                                         | ✅            |
+| POST   | `/forget-password` | request a change for a user password by email                | ❌            |
+| POST   | `/reset-password`  | recieve new password with token to change forgotton password | ❌            |
+| POST   | `/verify-email`    | verify user email by otp                                     | ❌            |
+| POST   | `/resend-otp`      | resend otp for a user on email                               | ❌            |
+| POST   | `/logout`          | logout user and remove cookie tokens                         | ✅            |
+
+### User — `/user`
+
+| Method | Endpoint  | Description                                        | Auth Required |
+| ------ | --------- | -------------------------------------------------- | ------------- |
+| DELETE | `/delete` | delete A user from system and remove cookie tokens | ✅            |
+
+### Quizzes — `/quizzes`
+
+| Method | Endpoint                          | Description                                 | Auth Required |
+| ------ | --------------------------------- | ------------------------------------------- | ------------- |
+| GET    | `/`                               | Get all quizzes with user progress if exist | ✅            |
+| GET    | `/:quizId/questions`              | Get a questions of the quiz                 | ✅            |
+| GET    | `/questions/:questionId/answers`  | Get the choices of the question             | ✅            |
+| GET    | `/questions/:questionId/answered` | Get user answer for the question            | ✅            |
+| GET    | `/passed`                         | Get passed quizzes for the user             | ✅            |
+| GET    | `/:quizId/progress`               | Get progress of specific quiz               | ✅            |
+| POST   | `/:quizId/start`                  | Begin the quiz                              | ✅            |
+| POST   | `/:quizId/pause`                  | Pause the started quiz                      | ✅            |
+| POST   | `/:quizId/progress`               | Insert user progress                        | ✅            |
+| GET    | `/stats`                          | Get the user stats in the platform          | ✅            |
+| GET    | `/leaderboard`                    | Get leaderboard and ranked users            | ✅            |
+
+> 📌 All protected routes require an `cookies token` .
+
+---
+
+## Project Structure
+
+```
+src
+├── common
+│   ├── decorators
+│   │   ├── match.decorator.ts
+│   │   ├── public.decorator.ts
+│   │   └── user.decorator.ts
+│   ├── filters
+│   │   └── global-exception.filter.ts
+│   ├── guards
+│   │   └── jwt-auth.guard.ts
+│   └── interceptors
+│       ├── logging.interceptor.ts
+│       └── transform-response.interceptor.ts
+├── config
+│   └── db-connectiont.ts
+├── modules
+│   ├── auth
+│   │   ├── constants
+│   │   │   ├── auth.constants.ts
+│   │   │   └── token-type.constant.ts
+│   │   ├── dto
+│   │   │   ├── change-password.dto.ts
+│   │   │   ├── forget-password.dto.ts
+│   │   │   ├── google-auth.dto.ts
+│   │   │   ├── login.dto.ts
+│   │   │   ├── otp.dto.ts
+│   │   │   ├── resend-otp.dto.ts
+│   │   │   ├── reset-password.dto.ts
+│   │   │   └── signup.dto.ts
+│   │   ├── strategies
+│   │   │   ├── googleAuth.strategy.ts
+│   │   │   ├── jwt.strategy.ts
+│   │   │   └── jwtRefersh.strategy.ts
+│   │   ├── types
+│   │   │   └── response-types.ts
+│   │   ├── auth.controller.spec.ts
+│   │   ├── auth.controller.ts
+│   │   ├── auth.module.ts
+│   │   ├── auth.service.spec.ts
+│   │   └── auth.service.ts
+│   ├── mail
+│   │   ├── templates
+│   │   │   ├── email-verification.tsx
+│   │   │   └── reset-password.tsx
+│   │   ├── mail.module.ts
+│   │   ├── mail.service.spec.ts
+│   │   └── mail.service.ts
+│   ├── quiz
+│   │   ├── constants
+│   │   │   └── quiz-progress-status.ts
+│   │   ├── dto
+│   │   │   ├── insert-progress.dto.ts
+│   │   │   ├── pagination.dto.ts
+│   │   │   └── pause-quiz.dto.ts
+│   │   ├── entities
+│   │   │   ├── answer.entity.ts
+│   │   │   ├── question.entity.ts
+│   │   │   ├── quiz.entity.ts
+│   │   │   ├── user-progress.entity.ts
+│   │   │   └── user-quiz-answer.entity.ts
+│   │   ├── quiz.controller.spec.ts
+│   │   ├── quiz.controller.ts
+│   │   ├── quiz.module.ts
+│   │   ├── quiz.service.spec.ts
+│   │   └── quiz.service.ts
+│   └── user
+│       ├── constants
+│       │   └── provider.constant.ts
+│       ├── dto
+│       │   └── user-response.dto.ts
+│       ├── entities
+│       │   ├── deletedUser.entity.ts
+│       │   ├── token.entity.ts
+│       │   └── user.entity.ts
+│       ├── user.controller.spec.ts
+│       ├── user.controller.ts
+│       ├── user.module.ts
+│       ├── user.service.spec.ts
+│       └── user.service.ts
+├── app.controller.ts
+├── app.module.ts
+└── main.ts
+```
+
+---
+
+## 🏗️ System Architecture
+
+This section outlines the backend architecture of Quizzer, broken down into five diagrams: a high-level overview, module dependency graph, service class diagram, data flow diagram, and database schema.
+
+---
+
+### High-level Overview
+
+A bird's-eye view of how the client interacts with the API and how each module connects to the database.
+
+```mermaid
+graph TD
+    Client["Client (HTTP)"]
+    Gateway["API Gateway / Main.ts"]
+    Auth["Auth Module"]
+    User["User Module"]
+    Quiz["Quiz Module"]
+    Mail["Mail Module"]
+    DB[("PostgreSQL")]
+
+    Client --> Gateway
+    Gateway --> Auth
+    Gateway --> User
+    Gateway --> Quiz
+    Auth --> Mail
+    Auth --> DB
+    User --> DB
+    Quiz --> DB
+```
+
+---
+
+### Module Breakdown
+
+The internal NestJS module dependency graph, showing how modules import and depend on each other.
+
+```mermaid
+graph LR
+    App["AppModule"]
+    Auth["AuthModule"]
+    User["UserModule"]
+    Quiz["QuizModule"]
+    Mail["MailModule"]
+    Passport["PassportModule"]
+    JWT["JwtModule"]
+    TypeOrm["TypeOrmModule"]
+
+    App --> Auth
+    App --> User
+    App --> Quiz
+    App --> Mail
+    Auth --> Mail
+    Auth --> User
+    Auth --> Passport
+    Auth --> JWT
+    User --> TypeOrm
+    Quiz --> TypeOrm
+```
+
+---
+
+### Services Class Diagram
+
+A breakdown of each service's public interface and how services depend on one another. `+` denotes public methods, `-` denotes private methods.
+
+```mermaid
+classDiagram
+class AuthService {
++createUser()
++validateGoogleUser()
++validateLocalUser()
++resetPassword()
++changePassword()
+-generateOtp()
++verifyOtp()
++resendOtp()
++sendOtp()
++forgotPassword()
++logout()
++generateTokens()
++refreshTokens()
+}
+class UserService {
++createUser()
++findOne()
++findDeletedByEmail()
++findOrCreateGoogleUser()
++deleteUser()
++updateUser()
++saveToken()
++getToken()
++clearToken()
++incrementAttempts()
++verifyUser()
+
+}
+class QuizService {
++getQuizzes()
++getQuestionsByQuiz()
++getAnswersByQuestion()
++getPassedQuizzesNames()
++getUserQuizAnswer()
++getQuizProgress()
++startQuiz()
++insertUserProgress()
++pauseQuiz()
++getUserStats()
++getLeaderboard()
+}
+class MailService {
++sendResetPasswordEmail()
++sendOtpEmail()
+}
+
+    AuthService --> UserService : uses
+    AuthService --> MailService: uses
+
+```
+
+---
+
+### Data Flow Diagram
+
+Shows how data moves through the system between users, processes, and the database.
+
+```mermaid
+graph TD
+    U(["User"])
+
+    subgraph Processes
+        P1["1.0 Register / Login"]
+        P2["2.0 Manage Quizzes"]
+        P3["3.0 Track Progress"]
+        P4["4.0 Submit Answers"]
+        P5["5.0 Rank Leaderboard"]
+        P6["6.0 Delete Account"]
+
+    end
+
+    subgraph Database
+        DS1[("User")]
+        DS2[("Token")]
+        DS3[("DeletedUser")]
+        DS4[("Quizzes")]
+        DS5[("Questions")]
+        DS6[("Answers")]
+        DS7[("User Quiz Progress")]
+        DS8[("User Quiz Answers")]
+    end
+
+    U -->|"credentials"| P1
+    P1 -->|"check deleted"| DS3
+    P1 -->|"store user"| DS1
+    P1 -->|"JWT token"| U
+
+    U -->|"request quizzes"| P2
+    P2 -->|"fetch quizzes"| DS4
+    DS4 -->|"quiz data"| P2
+    P2 -->|"quiz list"| U
+
+    U -->|"start / pause quiz"| P3
+    P3 -->|"read / write progress"| DS7
+    DS7 -->|"progress state"| P3
+    P3 -->|"progress state"| U
+
+    U -->|"selected answer"| P4
+    P4 -->|"validate answer"| DS6
+    P4 -->|"store answer"| DS8
+    DS8 -->|"score result"| P4
+    P4 -->|"score result"| U
+
+    U -->|"request leaderboard"| P5
+    P5 -->|"aggregate scores"| DS7
+    P5 -->|"ranked results"| U
+
+    U -->|"delete request"| P6
+    P6 -->|"delete user"| DS1
+    P6 -->|"revoke tokens"| DS2
+    P6 -->|"store email"| DS3
+    P6 -->|"confirmed"| U
+```
+
+---
+
+### 🗄️ Database Schema
+
+The following diagram represents the relational structure of the Quizzer database, including user authentication, quiz management, progress tracking, and answer submission.
+
+```mermaid
+erDiagram
+  users {
+    uuid id PK
+    string name
+    string email
+    string password
+    string googleId
+    string providers
+    boolean isEmailVerified
+  }
+  tokens {
+    uuid id PK
+    string token
+    enum type
+    date expiresAt
+    int attempts
+    date lastSentAt
+    date createdAt
+    uuid userId FK
+  }
+  deleted_users {
+    uuid id PK
+    string email
+    date deletedAt
+  }
+  quizzes {
+    uuid id PK
+    string title
+    text description
+    int timeInSeconds
+  }
+  questions {
+    uuid id PK
+    uuid quizId FK
+    text text
+    int orderIndex
+  }
+  answers {
+    uuid id PK
+    uuid questionId FK
+    varchar text
+    boolean isCorrect
+    int orderIndex
+  }
+  user_quiz_progress {
+    uuid id PK
+    uuid userId FK
+    uuid quizId FK
+    uuid pausedAtQuestionId FK
+    enum status
+    numeric score
+    boolean passed
+    int remainingTimeSeconds
+    date attemptAt
+    date completedAt
+  }
+  user_quiz_answers {
+    uuid id PK
+    uuid userId FK
+    uuid quizId FK
+    uuid questionId FK
+    uuid selectedAnswerId FK
+    boolean isCorrect
+  }
+
+  users ||--o{ tokens : "has"
+  users ||--o{ user_quiz_progress : "tracks"
+  users ||--o{ user_quiz_answers : "submits"
+  quizzes ||--o{ questions : "contains"
+  questions ||--o{ answers : "has"
+  quizzes ||--o{ user_quiz_progress : "tracked by"
+  quizzes ||--o{ user_quiz_answers : "answered in"
+  questions ||--o{ user_quiz_answers : "answered as"
+  answers ||--o{ user_quiz_answers : "selected as"
+  questions ||--o| user_quiz_progress : "paused at"
+```
+
+---
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+  Built with ❤️ by <a href="https://github.com/Ahmed-Elgammal-900">Ahmed Elgammal</a>
+</div>
