@@ -320,14 +320,12 @@ export class QuizService {
       throw new BadRequestException('Quiz is not active');
     }
 
-    if (pausedAtQuestionId) {
-      const question = await this.questionRepo.findOne({
-        where: { id: pausedAtQuestionId, quizId },
-      });
+    const question = await this.questionRepo.findOne({
+      where: { id: pausedAtQuestionId, quizId },
+    });
 
-      if (!question) {
-        throw new NotFoundException('Question does not belong to this quiz');
-      }
+    if (!question) {
+      throw new NotFoundException('Question does not belong to this quiz');
     }
 
     await this.userQuizProgressRepo.upsert(
