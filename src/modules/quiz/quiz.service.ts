@@ -228,6 +228,12 @@ export class QuizService {
       throw new BadRequestException('Quiz is not active');
     }
 
+    const existingAnswer = await this.userQuizAnswerRepo.findOne({
+      where: { userId, quizId, questionId },
+    });
+    if (existingAnswer) {
+      throw new BadRequestException('Question already answered');
+    }
     await this.userQuizAnswerRepo.upsert(
       {
         userId,
@@ -300,11 +306,28 @@ export class QuizService {
     pausedAtQuestionId: string,
     remainingTimeSeconds: number,
   ) {
+    if (remainingTimeSeconds < 0) {
+      throw new BadRequestException('remainingTimeSeconds must be >= 0');
+    }
     const progress = await this.userQuizProgressRepo.findOne({
       where: { userId, quizId },
     });
     if (!progress) {
       throw new NotFoundException('Quiz not started yet');
+    }
+
+    if (progress.status !== QuizProgressStatus.IN_PROGRESS) {
+      throw new BadRequestException('Quiz is not active');
+    }
+
+    if (pausedAtQuestionId) {
+      const question = await this.questionRepo.findOne({
+        where: { id: pausedAtQuestionId, quizId },
+      });
+
+      if (!question) {
+        throw new NotFoundException('Question does not belong to this quiz');
+      }
     }
 
     await this.userQuizProgressRepo.upsert(

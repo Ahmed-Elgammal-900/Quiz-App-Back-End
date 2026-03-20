@@ -227,6 +227,7 @@ describe('QuizService', () => {
         quizId: 'quiz-id',
         status: QuizProgressStatus.IN_PROGRESS,
       });
+      questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
       userQuizProgressRepo.upsert.mockResolvedValue(null);
 
       await service.pauseQuiz('user-id', 'quiz-id', 'q-id', 270);
@@ -255,6 +256,7 @@ describe('QuizService', () => {
         quizId: 'quiz-id',
         status: QuizProgressStatus.IN_PROGRESS,
       });
+      questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
       userQuizProgressRepo.upsert.mockResolvedValue(null);
 
       await service.pauseQuiz('user-id', 'quiz-id', 'q-id', 0);
