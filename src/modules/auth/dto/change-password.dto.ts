@@ -45,6 +45,8 @@ export class UpdatePasswordDto {
     description: 'Must match newPassword exactly',
     example: 'NewPass@456',
   })
+  @IsNotEmpty()
+  @IsString()
   @Match('newPassword', { message: 'Passwords do not match' })
   confirmPassword: string;
 }

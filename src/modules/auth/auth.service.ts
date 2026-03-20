@@ -355,7 +355,16 @@ export class AuthService {
       TokenType.PASSWORD_RESET,
       expiresAt,
     );
-    await this.mailService.sendResetPasswordEmail(email, resetToken, user.name);
+
+    try {
+      await this.mailService.sendResetPasswordEmail(
+        email,
+        resetToken,
+        user.name,
+      );
+    } catch {
+      await this.userService.clearToken(TokenType.PASSWORD_RESET, user.id);
+    }
 
     return { message: 'If email exists, reset link has been sent' };
   }
@@ -473,7 +482,15 @@ export class AuthService {
       .createHash('sha256')
       .update(oldRefreshToken)
       .digest('hex');
-    await this.userService.clearToken(TokenType.REFRESH, undefined, hashedOld);
+
+    const deleted = await this.userService.clearToken(
+      TokenType.REFRESH,
+      userId,
+      hashedOld,
+    );
+    if (deleted.affected !== 1) {
+      throw new UnauthorizedException();
+    }
 
     return await this.generateTokens(user);
   }

@@ -36,7 +36,7 @@ export class Token {
   createdAt: Date;
 
   @ManyToOne(() => User, (user) => user.tokens, { onDelete: 'CASCADE' })
-  @JoinColumn()
+  @JoinColumn({ name: 'userId' })
   user: User;
 
   @Column()

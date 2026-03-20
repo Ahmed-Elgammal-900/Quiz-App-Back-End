@@ -86,7 +86,8 @@ export class MailService {
         html: emailHtml,
       });
     } catch (error) {
-      throw new Error(`Failed to send mail`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to send mail: ${message}`);
     }
   }
 

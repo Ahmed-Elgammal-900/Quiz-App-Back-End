@@ -30,9 +30,12 @@ async function bootstrap() {
     throw new Error('FRONT_END_ORIGIN must be a valid absolute http(s) URL');
   }
 
+  const isProduction = process.env.NODE_ENV === 'production';
   // app init
   const app = await NestFactory.create(AppModule, {
-    logger: ['verbose', 'debug', 'log', 'warn', 'error', 'fatal'],
+    logger: isProduction
+      ? ['log', 'warn', 'error', 'fatal']
+      : ['verbose', 'debug', 'log', 'warn', 'error', 'fatal'],
   });
   app.use(helmet());
 
@@ -49,16 +52,18 @@ async function bootstrap() {
   );
 
   app.use(cookieParser());
-  // Swagger Config load locally to see swagger ui
-  const config = new DocumentBuilder()
-    .setTitle('Quizzer API')
-    .setDescription('The Quizzer API documentation')
-    .setVersion('1.0')
-    .addCookieAuth('access_token')
-    .build();
+  // Swagger Config - enabled only in non-production environments
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Quizzer API')
+      .setDescription('The Quizzer API documentation')
+      .setVersion('1.0')
+      .addCookieAuth('access_token')
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+  }
   //
   await app.listen(process.env.PORT ?? 3000);
 }

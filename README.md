@@ -100,7 +100,7 @@ This project includes a comprehensive test suite built with **Jest**
 **unit test & integration test**
 
 ```bash
-npn run test
+npm run test
 ```
 
 **e2e test**
@@ -171,7 +171,7 @@ you will find docs on `http://localhost:3000/docs` (or the port defined in your 
 
 ## Project Structure
 
-```
+```text
 src
 ├── common
 │   ├── decorators

@@ -145,7 +145,10 @@ describe('QuizService', () => {
     });
 
     it('should calculate score correctly', async () => {
-      userQuizProgressRepo.findOne.mockResolvedValue({ passed: false });
+      userQuizProgressRepo.findOne.mockResolvedValue({
+        passed: false,
+        status: QuizProgressStatus.IN_PROGRESS,
+      });
       questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
       answerRepo.findOne.mockResolvedValue({ isCorrect: true });
       userQuizAnswerRepo.upsert.mockResolvedValue(null);
@@ -167,7 +170,10 @@ describe('QuizService', () => {
     });
 
     it('should mark as completed and passed on last correct question', async () => {
-      userQuizProgressRepo.findOne.mockResolvedValue({ passed: false });
+      userQuizProgressRepo.findOne.mockResolvedValue({
+        passed: false,
+        status: QuizProgressStatus.IN_PROGRESS,
+      });
       questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
       answerRepo.findOne.mockResolvedValue({ isCorrect: true });
       userQuizAnswerRepo.upsert.mockResolvedValue(null);
@@ -193,7 +199,10 @@ describe('QuizService', () => {
     });
 
     it('should not update score if user already passed', async () => {
-      userQuizProgressRepo.findOne.mockResolvedValue({ passed: true });
+      userQuizProgressRepo.findOne.mockResolvedValue({
+        passed: true,
+        status: QuizProgressStatus.IN_PROGRESS,
+      });
       questionRepo.findOne.mockResolvedValue({ id: 'q-id', quizId: 'quiz-id' });
       answerRepo.findOne.mockResolvedValue({ isCorrect: true });
       userQuizAnswerRepo.upsert.mockResolvedValue(null);

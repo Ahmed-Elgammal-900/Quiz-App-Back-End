@@ -13,15 +13,26 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler) {
     const request = context.switchToHttp().getRequest();
+
     const { method, url, user } = request;
+    const safeUrl = typeof url === 'string' ? url.split('?')[0] : url;
+    const actor = user?.id ? 'authenticated' : 'guest';
     const start = Date.now();
 
-    this.logger.log(`→ ${method} ${url} — user: ${user?.id ?? 'guest'}`);
+    this.logger.log(`→ ${method} ${safeUrl} — actor: ${actor}`);
 
     return next.handle().pipe(
-      tap(() => {
-        const duration = Date.now() - start;
-        this.logger.log(`← ${method} ${url} — ${duration}ms`);
+      tap({
+        next: () => {
+          const duration = Date.now() - start;
+          this.logger.log(`← ${method} ${safeUrl} — ${duration}ms`);
+        },
+        error: (error) => {
+          const duration = Date.now() - start;
+          this.logger.warn(
+            `← ${method} ${safeUrl} — failed in ${duration}ms: ${error?.message ?? 'unknown error'}`,
+          );
+        },
       }),
     );
   }

@@ -82,16 +82,16 @@ describe('UserController (e2e)', () => {
 
   // DELETE /user/delete
 
-  describe('DELETE /user/delete', () => {
+  describe('DELETE /user', () => {
     it('should fail without auth', async () => {
-      const res = await request(app.getHttpServer()).delete('/user/delete');
+      const res = await request(app.getHttpServer()).delete('/user');
 
       expect(res.status).toBe(401);
     });
 
     it('should delete account and clear cookies', async () => {
       const res = await request(app.getHttpServer())
-        .delete('/user/delete')
+        .delete('/user')
         .set('Cookie', cookies);
 
       expect(res.status).toBe(200);
@@ -114,7 +114,7 @@ describe('UserController (e2e)', () => {
 
     it('should fail after deletion — token revoked', async () => {
       const res = await request(app.getHttpServer())
-        .delete('/user/delete')
+        .delete('/user')
         .set('Cookie', cookies);
 
       expect(res.status).toBe(401);
@@ -124,16 +124,18 @@ describe('UserController (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/auth/signup')
         .send(TEST_USER);
-      expect(res.body.message).toBe('this account was deleted');
+
       expect(res.status).toBe(409);
+      expect(res.body.message).toBe('this account was deleted');
     });
 
     it('should prevent login with deleted account', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email: TEST_USER.email, password: TEST_USER.password });
-      expect(res.body.message).toBe('this account was deleted');
+
       expect(res.status).toBe(400);
+      expect(res.body.message).toBe('this account was deleted');
     });
   });
 });

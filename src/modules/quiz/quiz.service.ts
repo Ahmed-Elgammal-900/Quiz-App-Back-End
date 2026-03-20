@@ -72,10 +72,8 @@ export class QuizService {
 
     const [questions, total] = await this.questionRepo
       .createQueryBuilder('question')
-      .leftJoinAndSelect('question.answers', 'answer')
       .where('question.quizId = :quizId', { quizId })
       .orderBy('question.orderIndex', 'ASC')
-      .addOrderBy('answer.orderIndex', 'ASC')
       .skip(skip)
       .take(limit)
       .getManyAndCount();
@@ -97,10 +95,12 @@ export class QuizService {
    * @returns List of answers for the question
    */
   async getAnswersByQuestion(questionId: string) {
-    return this.answerRepo.find({
-      where: { questionId },
-      order: { orderIndex: 'ASC' },
-    });
+    return this.answerRepo
+      .createQueryBuilder('answer')
+      .select(['answer.id', 'answer.text', 'answer.orderIndex'])
+      .where('answer.questionId = :questionId', { questionId })
+      .orderBy('answer.orderIndex', 'ASC')
+      .getMany();
   }
 
   /**
@@ -224,6 +224,10 @@ export class QuizService {
 
     if (!progress) throw new BadRequestException('Quiz not started yet');
 
+    if (progress.status !== QuizProgressStatus.IN_PROGRESS) {
+      throw new BadRequestException('Quiz is not active');
+    }
+
     await this.userQuizAnswerRepo.upsert(
       {
         userId,
@@ -277,6 +281,7 @@ export class QuizService {
       totalQuestions,
       answeredQuestions,
       isLastQuestion,
+      answerIsCorrect: answer?.isCorrect,
     };
   }
 

@@ -26,7 +26,7 @@ export class UserController {
    * @param res - server response
    * @returns message confirming successful deletion
    */
-  @Delete('delete')
+  @Delete()
   @ApiOperation({
     summary: 'Delete user account',
     description:

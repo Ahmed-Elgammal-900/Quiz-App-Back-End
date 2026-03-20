@@ -214,7 +214,7 @@ export class UserService {
     if (userId) where.userId = userId;
     if (tokenValue) where.token = tokenValue;
 
-    await this.tokenRepository.delete(where);
+    return await this.tokenRepository.delete(where);
   }
 
   /**

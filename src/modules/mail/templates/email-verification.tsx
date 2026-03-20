@@ -32,7 +32,7 @@ const formatOtp = (otp: string) => otp.replace(/^(\d{3})(\d{3})$/, '$1 $2');
 export const OTPEmailTemplate = ({
   otp,
   appName = 'Quizzer',
-  expiryMins = 10,
+  expiryMins = 5,
   recipientName = '',
   primaryColor = '#0f1fd1',
 }: OTPEmailTemplateProps) => {
