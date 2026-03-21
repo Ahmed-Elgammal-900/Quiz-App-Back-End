@@ -22,7 +22,7 @@ export class UserController {
 
   /**
    * Delete a user from database and remove cookies
-   * @route DELETE /User
+   * @route DELETE /user
    * @param user - user response from jwt guards
    * @param res - server response
    * @returns message confirming successful deletion
