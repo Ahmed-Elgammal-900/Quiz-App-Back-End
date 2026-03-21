@@ -145,9 +145,9 @@ you will find docs on `http://localhost:3000/docs` (or the port defined in your 
 
 ### User — `/user`
 
-| Method | Endpoint  | Description                                        | Auth Required |
-| ------ | --------- | -------------------------------------------------- | ------------- |
-| DELETE | `/delete` | delete A user from system and remove cookie tokens | ✅            |
+| Method | Endpoint | Description                                        | Auth Required |
+| ------ | -------- | -------------------------------------------------- | ------------- |
+| DELETE | `/`      | delete A user from system and remove cookie tokens | ✅            |
 
 ### Quizzes — `/quizzes`
 
