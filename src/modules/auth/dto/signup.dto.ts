@@ -11,6 +11,7 @@ import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
 } from '../constants/auth.constants';
+import { Match } from '../../../common/decorators/match.decorator';
 
 export class CreateAuthDto {
   @ApiProperty({
@@ -48,4 +49,10 @@ export class CreateAuthDto {
       'Password must contain upper, lower, number, and special character',
   })
   password: string;
+
+  @ApiProperty({ example: 'Password@123' })
+  @IsNotEmpty()
+  @IsString()
+  @Match('password')
+  confirmPassword: string;
 }

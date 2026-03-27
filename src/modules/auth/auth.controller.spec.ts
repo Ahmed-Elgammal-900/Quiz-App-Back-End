@@ -16,6 +16,7 @@ const mockAuthService = {
   createUser: jest.fn(),
   validateLocalUser: jest.fn(),
   generateTokens: jest.fn(),
+  generateOAuthCode: jest.fn(),
   refreshTokens: jest.fn(),
   changePassword: jest.fn(),
   forgotPassword: jest.fn(),
@@ -45,21 +46,24 @@ describe('AuthController', () => {
     jest.clearAllMocks();
   });
 
+  // signup
+
   describe('POST /auth/signup', () => {
     it('should register a new user and return userId', async () => {
       mockAuthService.createUser.mockResolvedValue({ id: 'user-123' });
 
-      const result = await controller.create(
-        { name: 'Test', email: 'test@test.com', password: 'Pass123!' } as any,
-        mockResponse(),
-      );
+      const result = await controller.create({
+        name: 'Test',
+        email: 'test@test.com',
+        password: 'Pass123!',
+      } as any);
 
       expect(result).toEqual({ message: 'signup success', userId: 'user-123' });
       expect(mockAuthService.createUser).toHaveBeenCalledTimes(1);
     });
   });
 
-  // ─── login ────────────────────────────────────────────────────────────────
+  // login
 
   describe('POST /auth/login', () => {
     it('should login verified user and set cookies', async () => {
@@ -98,7 +102,7 @@ describe('AuthController', () => {
     });
   });
 
-  // ─── refresh token ────────────────────────────────────────────────────────
+  // refresh token
 
   describe('POST /auth/refresh-token', () => {
     it('should rotate tokens and set new cookies', async () => {
@@ -118,7 +122,7 @@ describe('AuthController', () => {
     });
   });
 
-  // ─── change password ──────────────────────────────────────────────────────
+  // change password
 
   describe('PATCH /auth/change-password', () => {
     it('should change password and return success message', async () => {
@@ -127,7 +131,6 @@ describe('AuthController', () => {
       const result = await controller.changePassword(
         { id: 'user-123' } as any,
         { currentPassword: 'old', newPassword: 'new' } as any,
-        mockResponse(),
       );
 
       expect(result).toEqual({ message: 'password changed successfully' });
@@ -138,7 +141,7 @@ describe('AuthController', () => {
     });
   });
 
-  // ─── forgot password ──────────────────────────────────────────────────────
+  // forgot password
 
   describe('POST /auth/forget-password', () => {
     it('should return generic message regardless of email existence', async () => {
@@ -146,10 +149,9 @@ describe('AuthController', () => {
         message: 'If email exists, reset link has been sent',
       });
 
-      const result = await controller.forgetPassword(
-        { email: 'test@test.com' },
-        mockResponse(),
-      );
+      const result = await controller.forgetPassword({
+        email: 'test@test.com',
+      });
 
       expect(result).toEqual({
         message: 'If email exists, reset link has been sent',
@@ -157,7 +159,7 @@ describe('AuthController', () => {
     });
   });
 
-  // ─── reset password ───────────────────────────────────────────────────────
+  // reset password
 
   describe('POST /auth/reset-password', () => {
     it('should reset password and set cookies for verified user', async () => {
@@ -195,7 +197,7 @@ describe('AuthController', () => {
     });
   });
 
-  // ─── verify email ─────────────────────────────────────────────────────────
+  // verify email
 
   describe('POST /auth/verify-email', () => {
     it('should verify email and set cookies', async () => {
@@ -217,7 +219,7 @@ describe('AuthController', () => {
     });
   });
 
-  // ─── resend otp ───────────────────────────────────────────────────────────
+  // resend otp
 
   describe('POST /auth/resend-otp', () => {
     it('should resend OTP and return success message', async () => {
@@ -232,7 +234,16 @@ describe('AuthController', () => {
     });
   });
 
-  // ─── logout ───────────────────────────────────────────────────────────────
+  // verify access token
+
+  describe('POST /auth/verify-access-token', () => {
+    it('should return success true for valid token', async () => {
+      const result = await controller.verifyAccessToken();
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  // logout
 
   describe('POST /auth/logout', () => {
     it('should logout user and clear cookies', async () => {

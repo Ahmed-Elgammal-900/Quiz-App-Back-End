@@ -9,7 +9,7 @@
 ![Jest](https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 ![Version](https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge)
-![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
+![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red?style=for-the-badge)
 
 > A scalable, production-ready REST API for the Quizzer platform, featuring secure JWT-based authentication, comprehensive quiz management, and a dynamic leaderboard system that enables users to evaluate their performance and engage in competitive gameplay
 
@@ -129,19 +129,21 @@ you will find docs on `http://localhost:3000/docs` (or the port defined in your 
 
 ### Auth — `/auth`
 
-| Method | Endpoint           | Description                                                  | Auth Required |
-| ------ | ------------------ | ------------------------------------------------------------ | ------------- |
-| POST   | `/signup`          | Register a new user                                          | ❌            |
-| POST   | `/login`           | Login and receive a token                                    | ❌            |
-| GET    | `/google`          | redirect to google auth                                      | ❌            |
-| GET    | `/google/callback` | get google user info to login or signup                      | ❌            |
-| POST   | `/refresh-token`   | rotate access_token and refresh_token                        | ✅            |
-| PATCH  | `/change-password` | change user password                                         | ✅            |
-| POST   | `/forget-password` | request a change for a user password by email                | ❌            |
-| POST   | `/reset-password`  | recieve new password with token to change forgotton password | ❌            |
-| POST   | `/verify-email`    | verify user email by otp                                     | ❌            |
-| POST   | `/resend-otp`      | resend otp for a user on email                               | ❌            |
-| POST   | `/logout`          | logout user and remove cookie tokens                         | ✅            |
+| Method | Endpoint               | Description                                                  | Auth Required |
+| ------ | ---------------------- | ------------------------------------------------------------ | ------------- |
+| POST   | `/signup`              | Register a new user                                          | ❌            |
+| POST   | `/login`               | Login and receive a token                                    | ❌            |
+| GET    | `/google`              | redirect to google auth                                      | ❌            |
+| GET    | `/google/callback`     | get google user info to login or signup                      | ❌            |
+| GET    | `/exchange`            | exchange oauth code with session tokens                      | ❌            |
+| POST   | `/refresh-token`       | rotate access_token and refresh_token                        | ✅            |
+| PATCH  | `/change-password`     | change user password                                         | ✅            |
+| POST   | `/forget-password`     | request a change for a user password by email                | ❌            |
+| POST   | `/reset-password`      | recieve new password with token to change forgotton password | ❌            |
+| POST   | `/verify-email`        | verify user email by otp                                     | ❌            |
+| POST   | `/resend-otp`          | resend otp for a user on email                               | ❌            |
+| POST   | `/verify-access-token` | verify access token                                          | ✅            |
+| POST   | `/logout`              | logout user and remove cookie tokens                         | ✅            |
 
 ### User — `/user`
 
@@ -271,21 +273,38 @@ A bird's-eye view of how the client interacts with the API and how each module c
 ```mermaid
 graph TD
     Client["Client (HTTP)"]
-    Gateway["API Gateway / Main.ts"]
-    Auth["Auth Module"]
-    User["User Module"]
-    Quiz["Quiz Module"]
-    Mail["Mail Module"]
-    DB[("PostgreSQL")]
 
-    Client --> Gateway
+    subgraph NestJS["NestJS Server"]
+        Gateway["API Gateway · main.ts"]
+
+        subgraph Modules["Modules"]
+            Auth["Auth\nRegister, login, OAuth"]
+            User["User\nProfile, account"]
+            Quiz["Quiz\nQuestions, answers"]
+            Mail["Mail\nOTP"]
+        end
+    end
+
+    subgraph Database["Database"]
+        PG[("PostgreSQL\nUsers, quizzes, answers")]
+    end
+
+    subgraph External["External Services"]
+        Google["Google OAuth"]
+        SMTP["SMTP Server"]
+    end
+
+    Client -->|"HTTPS"| Gateway
     Gateway --> Auth
     Gateway --> User
     Gateway --> Quiz
-    Auth --> Mail
-    Auth --> DB
-    User --> DB
-    Quiz --> DB
+
+    Auth -.->|"triggers"| Mail
+    Auth -->|"OAuth"| Google
+    Auth --> PG
+    User --> PG
+    Quiz --> PG
+    Mail -->|"SMTP"| SMTP
 ```
 
 ---
@@ -339,6 +358,8 @@ class AuthService {
 +logout()
 +generateTokens()
 +refreshTokens()
++generateOAuthCode()
++consumeOAuthCode()
 }
 class UserService {
 +createUser()
@@ -352,7 +373,7 @@ class UserService {
 +clearToken()
 +incrementAttempts()
 +verifyUser()
-
++saveGoogleCode()
 }
 class QuizService {
 +getQuizzes()
@@ -389,11 +410,12 @@ graph TD
 
     subgraph Processes
         P1["1.0 Register / Login"]
-        P2["2.0 Manage Quizzes"]
-        P3["3.0 Track Progress"]
-        P4["4.0 Submit Answers"]
-        P5["5.0 Rank Leaderboard"]
-        P6["6.0 Delete Account"]
+        P2["2.0 OAuth"]
+        P3["3.0 Manage Quizzes"]
+        P4["4.0 Track Progress"]
+        P5["5.0 Submit Answers"]
+        P6["6.0 Rank Leaderboard"]
+        P7["7.0 Delete Account"]
 
     end
 
@@ -413,31 +435,38 @@ graph TD
     P1 -->|"store user"| DS1
     P1 -->|"JWT token"| U
 
-    U -->|"request quizzes"| P2
-    P2 -->|"fetch quizzes"| DS4
-    DS4 -->|"quiz data"| P2
-    P2 -->|"quiz list"| U
+    U ---> |"authorize"| P2
+    P2 -->|"store oauth code"| DS2
+    P2 ---> |"redirect with code"| U
+    U ---> |"send code"| P2
+    P2 ---> |"validate code"| DS2
+    P2 ---> |"generate tokens"| U
 
-    U -->|"start / pause quiz"| P3
-    P3 -->|"read / write progress"| DS7
-    DS7 -->|"progress state"| P3
-    P3 -->|"progress state"| U
+    U -->|"request quizzes"| P3
+    P3 -->|"fetch quizzes"| DS4
+    DS4 -->|"quiz data"| P3
+    P3 -->|"quiz list"| U
 
-    U -->|"selected answer"| P4
-    P4 -->|"validate answer"| DS6
-    P4 -->|"store answer"| DS8
-    DS8 -->|"score result"| P4
-    P4 -->|"score result"| U
+    U -->|"start / pause quiz"| P4
+    P4 -->|"read / write progress"| DS7
+    DS7 -->|"progress state"| P4
+    P4 -->|"progress state"| U
 
-    U -->|"request leaderboard"| P5
-    P5 -->|"aggregate scores"| DS7
-    P5 -->|"ranked results"| U
+    U -->|"selected answer"| P5
+    P5 -->|"validate answer"| DS6
+    P5 -->|"store answer"| DS8
+    DS8 -->|"score result"| P5
+    P5 -->|"score result"| U
 
-    U -->|"delete request"| P6
-    P6 -->|"delete user"| DS1
-    P6 -->|"revoke tokens"| DS2
-    P6 -->|"store email"| DS3
-    P6 -->|"confirmed"| U
+    U -->|"request leaderboard"| P6
+    P6 -->|"aggregate scores"| DS7
+    P6 -->|"ranked results"| U
+
+    U -->|"delete request"| P7
+    P7 -->|"delete user"| DS1
+    P7 -->|"revoke tokens"| DS2
+    P7 -->|"store email"| DS3
+    P7 -->|"confirmed"| U
 ```
 
 ---
@@ -528,7 +557,15 @@ erDiagram
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+Copyright (c) 2026 Ahmed Elgammal. All Rights Reserved.
+
+No part of this software and its source code may be reproduced, distributed,
+or transmitted in any form or by any means, including photocopying, recording,
+or other electronic or mechanical methods, without the prior written permission
+of the author, except in the case of brief quotations embodied in critical
+reviews and certain other noncommercial uses permitted by copyright law.
+
+For permission requests, contact: elgmmal228@gmail.com
 
 ---
 

@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
 import { Profile } from 'passport-google-oauth20';
 import { UnauthorizedException } from '@nestjs/common';
+import { Request } from 'express';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
@@ -24,6 +25,13 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientSecret,
       callbackURL,
       scope: ['email', 'profile'],
+    });
+  }
+
+  authenticate(req: Request, options?: any) {
+    return super.authenticate(req, {
+      ...options,
+      prompt: 'select_account',
     });
   }
 

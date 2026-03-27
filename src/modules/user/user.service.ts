@@ -99,6 +99,9 @@ export class UserService {
     user = await this.findOne({ email });
     if (user) {
       user.googleId = googleId;
+      if (!user.isEmailVerified) {
+        user.isEmailVerified = true;
+      }
       if (!user.providers.includes(Provider.GOOGLE)) {
         user.providers = [...user.providers, Provider.GOOGLE];
       }
@@ -110,6 +113,7 @@ export class UserService {
       name,
       googleId,
       providers: [Provider.GOOGLE],
+      isEmailVerified: true,
     });
 
     return await this.userRepository.save(user);
@@ -237,6 +241,18 @@ export class UserService {
     });
 
     await this.clearToken(TokenType.EMAIL_VERIFY, userId);
+  }
+
+  async saveGoogleCode(userId: string, code: string) {
+    await this.tokenRepository.upsert(
+      {
+        userId,
+        token: code,
+        type: TokenType.OAUTH_CODE,
+        expiresAt: new Date(Date.now() + 60 * 1000), // 60 seconds
+      },
+      { conflictPaths: ['userId', 'type'] },
+    );
   }
 
   /**

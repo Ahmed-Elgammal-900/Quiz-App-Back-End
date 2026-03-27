@@ -13,6 +13,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { TokenType } from './constants/token-type.constant';
 
 jest.mock('bcrypt');
 
@@ -76,6 +77,7 @@ describe('AuthService', () => {
         name: 'Test',
         email: 'test@test.com',
         password: 'Pass123!',
+        confirmPassword: 'Pass123!',
       });
 
       expect(result).toEqual(user);
@@ -145,6 +147,28 @@ describe('AuthService', () => {
         }),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('should send OTP if email not verified on login', async () => {
+      mockUserService.findDeletedByEmail.mockResolvedValue(null);
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@test.com',
+        name: 'Test',
+        password: 'hashed',
+        isEmailVerified: false,
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockUserService.getToken.mockResolvedValue(null);
+      mockUserService.saveToken.mockResolvedValue(undefined);
+      mockMailService.sendOtpEmail.mockResolvedValue(undefined);
+
+      await service.validateLocalUser({
+        email: 'test@test.com',
+        password: 'Pass123!',
+      });
+
+      expect(mockMailService.sendOtpEmail).toHaveBeenCalledTimes(1);
+    });
   });
 
   // validateGoogleUser
@@ -183,6 +207,124 @@ describe('AuthService', () => {
           googleId: 'google-123',
         }),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // generateOAuthCode
+
+  describe('generateOAuthCode', () => {
+    it('should generate and store a hashed OAuth code', async () => {
+      mockUserService.saveToken.mockResolvedValue(undefined);
+
+      const result = await service.generateOAuthCode('user-123');
+
+      expect(typeof result).toBe('string');
+      expect(result).toHaveLength(64); // 32 bytes hex = 64 chars
+      expect(mockUserService.saveToken).toHaveBeenCalledTimes(1);
+      expect(mockUserService.saveToken).toHaveBeenCalledWith(
+        'user-123',
+        expect.any(String),
+        TokenType.OAUTH_CODE,
+        expect.any(Date),
+      );
+    });
+
+    it('should generate unique codes on each call', async () => {
+      mockUserService.saveToken.mockResolvedValue(undefined);
+
+      const code1 = await service.generateOAuthCode('user-123');
+      const code2 = await service.generateOAuthCode('user-123');
+
+      expect(code1).not.toBe(code2);
+    });
+
+    it('should set expiry ~60 seconds in the future', async () => {
+      mockUserService.saveToken.mockResolvedValue(undefined);
+
+      const before = Date.now();
+      await service.generateOAuthCode('user-123');
+      const after = Date.now();
+
+      const expiresAt: Date = mockUserService.saveToken.mock.calls[0][3];
+      expect(expiresAt.getTime()).toBeGreaterThanOrEqual(before + 59000);
+      expect(expiresAt.getTime()).toBeLessThanOrEqual(after + 61000);
+    });
+  });
+
+  // consumeOAuthCode
+
+  describe('consumeOAuthCode', () => {
+    it('should return user info on valid code', async () => {
+      const user = {
+        id: 'user-123',
+        email: 'test@test.com',
+        isEmailVerified: true,
+      };
+      mockUserService.getToken.mockResolvedValue({
+        expiresAt: new Date(Date.now() + 60000),
+      });
+      mockUserService.clearToken.mockResolvedValue(undefined);
+      mockUserService.findOne.mockResolvedValue(user);
+
+      const result = await service.consumeOAuthCode('valid-code', 'user-123');
+
+      expect(result).toEqual({
+        id: user.id,
+        email: user.email,
+        isEmailVerified: user.isEmailVerified,
+      });
+      expect(mockUserService.clearToken).toHaveBeenCalledWith(
+        TokenType.OAUTH_CODE,
+        'user-123',
+      );
+    });
+
+    it('should throw if token not found', async () => {
+      mockUserService.getToken.mockResolvedValue(null);
+
+      await expect(
+        service.consumeOAuthCode('invalid-code', 'user-123'),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw if token is expired', async () => {
+      mockUserService.getToken.mockResolvedValue({
+        expiresAt: new Date(Date.now() - 1000),
+      });
+
+      await expect(
+        service.consumeOAuthCode('expired-code', 'user-123'),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw if user not found after clearing token', async () => {
+      mockUserService.getToken.mockResolvedValue({
+        expiresAt: new Date(Date.now() + 60000),
+      });
+      mockUserService.clearToken.mockResolvedValue(undefined);
+      mockUserService.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.consumeOAuthCode('valid-code', 'user-123'),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('should hash the code before querying the token store', async () => {
+      mockUserService.getToken.mockResolvedValue({
+        expiresAt: new Date(Date.now() + 60000),
+      });
+      mockUserService.clearToken.mockResolvedValue(undefined);
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@test.com',
+        isEmailVerified: true,
+      });
+
+      await service.consumeOAuthCode('plain-code', 'user-123');
+
+      const calledWithHash = mockUserService.getToken.mock.calls[0][2];
+      expect(calledWithHash).not.toBe('plain-code');
+      expect(calledWithHash).toHaveLength(64); // sha256 hex = 64 chars
     });
   });
 
@@ -317,6 +459,18 @@ describe('AuthService', () => {
       });
     });
 
+    it('should throw if user not found', async () => {
+      mockUserService.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.changePassword('user-123', {
+          currentPassword: 'old',
+          newPassword: 'new',
+          confirmPassword: 'new',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
     it('should throw if current password is wrong', async () => {
       mockUserService.findOne.mockResolvedValue({ password: 'hashed' });
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
@@ -343,6 +497,87 @@ describe('AuthService', () => {
           confirmPassword: 'same',
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // resetPassword
+
+  describe('resetPassword', () => {
+    it('should reset password successfully', async () => {
+      mockUserService.getToken.mockResolvedValue({
+        expiresAt: new Date(Date.now() + 60000),
+        userId: 'user-123',
+      });
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@test.com',
+        isEmailVerified: true,
+      });
+      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
+      mockUserService.updateUser.mockResolvedValue(undefined);
+      mockUserService.clearToken.mockResolvedValue(undefined);
+
+      const result = await service.resetPassword('newPass123!', 'raw-token');
+
+      expect(mockUserService.updateUser).toHaveBeenCalledWith('user-123', {
+        password: 'new-hashed',
+      });
+      expect(result).toMatchObject({ id: 'user-123' });
+    });
+
+    it('should throw if token not found', async () => {
+      mockUserService.getToken.mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword('newPass123!', 'bad-token'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw if token is expired', async () => {
+      mockUserService.getToken.mockResolvedValue({
+        expiresAt: new Date(Date.now() - 1000),
+        userId: 'user-123',
+      });
+      mockUserService.clearToken.mockResolvedValue(undefined);
+
+      await expect(
+        service.resetPassword('newPass123!', 'expired-token'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw if user not found after reset', async () => {
+      mockUserService.getToken.mockResolvedValue({
+        expiresAt: new Date(Date.now() + 60000),
+        userId: 'user-123',
+      });
+      mockUserService.findOne.mockResolvedValue(null);
+      mockUserService.clearToken.mockResolvedValue(undefined);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
+
+      await expect(
+        service.resetPassword('newPass123!', 'valid-token'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should send OTP if email not verified after reset', async () => {
+      mockUserService.getToken.mockResolvedValue({
+        expiresAt: new Date(Date.now() + 60000),
+        userId: 'user-123',
+      });
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@test.com',
+        name: 'Test',
+        isEmailVerified: false,
+      });
+      mockUserService.clearToken.mockResolvedValue(undefined);
+      mockUserService.saveToken.mockResolvedValue(undefined);
+      mockMailService.sendOtpEmail.mockResolvedValue(undefined);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
+
+      await service.resetPassword('newPass123!', 'valid-token');
+
+      expect(mockMailService.sendOtpEmail).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -474,6 +709,68 @@ describe('AuthService', () => {
         message: 'If email exists, reset link has been sent',
       });
       expect(mockMailService.sendResetPasswordEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it('should clear token if sending email fails', async () => {
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@test.com',
+        name: 'Test',
+      });
+      mockUserService.saveToken.mockResolvedValue(undefined);
+      mockMailService.sendResetPasswordEmail.mockRejectedValue(
+        new Error('SMTP error'),
+      );
+
+      await service.forgotPassword('test@test.com');
+
+      expect(mockUserService.clearToken).toHaveBeenCalledWith(
+        TokenType.PASSWORD_RESET,
+        'user-123',
+      );
+    });
+  });
+
+  // refreshTokens
+
+  describe('refreshTokens', () => {
+    it('should return new token pair', async () => {
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@test.com',
+        isEmailVerified: true,
+      });
+      mockUserService.clearToken.mockResolvedValue({ affected: 1 });
+      mockUserService.saveToken.mockResolvedValue(undefined);
+
+      const result = await service.refreshTokens(
+        'user-123',
+        'old-refresh-token',
+      );
+
+      expect(result).toHaveProperty('accessToken');
+      expect(result).toHaveProperty('refreshToken');
+    });
+
+    it('should throw if user not found', async () => {
+      mockUserService.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.refreshTokens('user-123', 'old-token'),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw if old token does not match', async () => {
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@test.com',
+        isEmailVerified: true,
+      });
+      mockUserService.clearToken.mockResolvedValue({ affected: 0 });
+
+      await expect(
+        service.refreshTokens('user-123', 'wrong-token'),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });
