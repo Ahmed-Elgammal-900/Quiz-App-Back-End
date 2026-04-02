@@ -306,7 +306,7 @@ describe('AuthService', () => {
       mockUserService.findOne.mockResolvedValue(null);
 
       await expect(service.consumeOAuthCode('valid-code')).rejects.toThrow(
-        ConflictException,
+        NotFoundException,
       );
     });
 
