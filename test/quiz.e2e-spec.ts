@@ -11,9 +11,10 @@ describe('QuizController (e2e)', () => {
   let cookies: string;
   let quizId: string;
   let questionId: string;
+  let module: TestingModule;
 
   beforeAll(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(MailService)
@@ -30,19 +31,18 @@ describe('QuizController (e2e)', () => {
     app.use(cookieParser());
     await app.init();
 
-    const authService = module.get(AuthService);
-    await authService.deleteTestUser('test@email.com');
-
     const register = await request(app.getHttpServer())
       .post('/auth/signup')
       .send({
         name: 'Test',
         email: 'test@email.com',
         password: 'Tyfj8f2@d1hjdf',
+        confirmPassword: 'Tyfj8f2@d1hjdf',
       });
 
     const userId = register.body.data.userId;
 
+    const authService = module.get(AuthService);
     await authService.forceVerifyUser(userId);
 
     const login = await request(app.getHttpServer())
@@ -78,6 +78,8 @@ describe('QuizController (e2e)', () => {
   });
 
   afterAll(async () => {
+    const authService = module.get(AuthService);
+    await authService.deleteTestUser('test@email.com');
     await app.close();
   });
 

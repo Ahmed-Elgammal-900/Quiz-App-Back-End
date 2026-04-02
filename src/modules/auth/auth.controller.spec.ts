@@ -23,6 +23,7 @@ const mockAuthService = {
   resetPassword: jest.fn(),
   verifyOtp: jest.fn(),
   resendOtp: jest.fn(),
+  consumeOAuthCode: jest.fn(),
   logout: jest.fn(),
 };
 
@@ -56,6 +57,7 @@ describe('AuthController', () => {
         name: 'Test',
         email: 'test@test.com',
         password: 'Pass123!',
+        confirmPassword: 'Pass123!',
       } as any);
 
       expect(result).toEqual({ message: 'signup success', userId: 'user-123' });
@@ -240,6 +242,32 @@ describe('AuthController', () => {
     it('should return success true for valid token', async () => {
       const result = await controller.verifyAccessToken();
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  // exchange code
+
+  describe('GET /auth/exchange', () => {
+    it('should exchange OAuth code and set cookies', async () => {
+      const user = { id: 'user-123', isEmailVerified: true };
+      mockAuthService.consumeOAuthCode.mockResolvedValue(user);
+      mockAuthService.generateTokens.mockResolvedValue({
+        accessToken: 'access',
+        refreshToken: 'refresh',
+      });
+
+      const res = mockResponse();
+      const result = await controller.exchange(
+        { code: 'oauth-code' } as any,
+        res,
+      );
+
+      expect(result).toEqual({ success: true });
+      expect(mockAuthService.consumeOAuthCode).toHaveBeenCalledWith(
+        'oauth-code',
+      );
+      expect(mockAuthService.generateTokens).toHaveBeenCalledWith(user);
+      expect(res.cookie).toHaveBeenCalledTimes(2);
     });
   });
 

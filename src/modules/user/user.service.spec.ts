@@ -335,6 +335,33 @@ describe('UserService', () => {
 
       expect(mockTokenRepo.upsert).toHaveBeenCalledTimes(1);
     });
+
+    it('should upsert token with correct shape', async () => {
+      mockTokenRepo.upsert.mockResolvedValue(undefined);
+      const expiresAt = new Date();
+
+      await service.saveToken(
+        'user-123',
+        'hashed-token',
+        TokenType.REFRESH,
+        expiresAt,
+      );
+
+      expect(mockTokenRepo.upsert).toHaveBeenCalledWith(
+        {
+          userId: 'user-123',
+          token: 'hashed-token',
+          type: TokenType.REFRESH,
+          expiresAt,
+          attempts: 0,
+          lastSentAt: expect.any(Date),
+        },
+        {
+          conflictPaths: ['userId', 'type'],
+          skipUpdateIfNoValuesChanged: true,
+        },
+      );
+    });
   });
 
   // getToken
@@ -462,43 +489,6 @@ describe('UserService', () => {
         isEmailVerified: true,
       });
       expect(mockTokenRepo.delete).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // saveGoogleCode
-
-  describe('saveGoogleCode', () => {
-    it('should upsert OAuth code token', async () => {
-      mockTokenRepo.upsert.mockResolvedValue(undefined);
-
-      await service.saveGoogleCode('user-123', 'hashed-code');
-
-      expect(mockTokenRepo.upsert).toHaveBeenCalledTimes(1);
-      expect(mockTokenRepo.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 'user-123',
-          token: 'hashed-code',
-          type: TokenType.OAUTH_CODE,
-          expiresAt: expect.any(Date),
-        }),
-        { conflictPaths: ['userId', 'type'] },
-      );
-    });
-
-    it('should set expiry ~60 seconds in the future', async () => {
-      mockTokenRepo.upsert.mockResolvedValue(undefined);
-
-      const before = Date.now();
-      await service.saveGoogleCode('user-123', 'hashed-code');
-      const after = Date.now();
-
-      const upsertedData = mockTokenRepo.upsert.mock.calls[0][0];
-      expect(upsertedData.expiresAt.getTime()).toBeGreaterThanOrEqual(
-        before + 59000,
-      );
-      expect(upsertedData.expiresAt.getTime()).toBeLessThanOrEqual(
-        after + 61000,
-      );
     });
   });
 

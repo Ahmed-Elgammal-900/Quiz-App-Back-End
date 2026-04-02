@@ -16,6 +16,7 @@ describe('UserController (e2e)', () => {
     name: 'Test User',
     email: 'new-user-test@email.com',
     password: 'Tyfj8f2@d1hkof',
+    confirmPassword: 'Tyfj8f2@d1hkof',
   };
 
   const loginAndGetCookies = async (): Promise<string> => {
@@ -65,22 +66,17 @@ describe('UserController (e2e)', () => {
     app.use(cookieParser());
     await app.init();
 
-    const userService = module.get(UserService);
-    await userService.deleteTestUser(TEST_USER.email);
-    await userService.deleteTestDeletedEmail(TEST_USER.email);
-
     await registerAndVerify();
     cookies = await loginAndGetCookies();
   });
 
   afterAll(async () => {
     const userService = module.get(UserService);
-    await userService.deleteTestUser(TEST_USER.email);
     await userService.deleteTestDeletedEmail(TEST_USER.email);
     await app.close();
   });
 
-  // DELETE /user/delete
+  // DELETE /user
 
   describe('DELETE /user', () => {
     it('should fail without auth', async () => {

@@ -243,18 +243,6 @@ export class UserService {
     await this.clearToken(TokenType.EMAIL_VERIFY, userId);
   }
 
-  async saveGoogleCode(userId: string, code: string) {
-    await this.tokenRepository.upsert(
-      {
-        userId,
-        token: code,
-        type: TokenType.OAUTH_CODE,
-        expiresAt: new Date(Date.now() + 60 * 1000), // 60 seconds
-      },
-      { conflictPaths: ['userId', 'type'] },
-    );
-  }
-
   /**
    * Deletes a user by email address. Intended exclusively for e2e testing.
    * Cleans up test users between runs to ensure a fresh state.

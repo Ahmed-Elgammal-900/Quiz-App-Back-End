@@ -382,12 +382,12 @@ export class AuthService {
     return OAuthCode;
   }
 
-  async consumeOAuthCode(code: string, userId: string) {
+  async consumeOAuthCode(code: string) {
     const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
 
     const token = await this.userService.getToken(
       TokenType.OAUTH_CODE,
-      userId,
+      undefined,
       hashedCode,
     );
 
@@ -395,8 +395,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired code');
     }
 
-    await this.userService.clearToken(TokenType.OAUTH_CODE, userId);
-    const user = await this.userService.findOne({ id: userId });
+    await this.userService.clearToken(TokenType.OAUTH_CODE, token.userId);
+    const user = await this.userService.findOne({ id: token.userId });
     if (!user) {
       throw new ConflictException('user not found');
     }

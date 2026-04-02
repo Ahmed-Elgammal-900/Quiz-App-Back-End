@@ -7,7 +7,6 @@ import {
   Res,
   Patch,
   Query,
-  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -35,6 +34,7 @@ import {
   ACCESS_TOKEN_MAX_AGE,
   REFRESH_TOKEN_MAX_AGE,
 } from './constants/auth.constants';
+import { ExchangeQueryDto } from './dto/exchange-query.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -163,9 +163,8 @@ export class AuthController {
     @Res() res: Response,
   ) {
     const OAuthCode = await this.authService.generateOAuthCode(user.id);
-    return res.redirect(
-      `${process.env.FRONT_END_ORIGIN}/api/callback?code=${OAuthCode}&userId=${user.id}`,
-    );
+    const frontEndOrigin = this.configService.get('FRONT_END_ORIGIN');
+    return res.redirect(`${frontEndOrigin}/api/callback?code=${OAuthCode}`);
   }
 
   /**
@@ -231,11 +230,10 @@ export class AuthController {
   @Public()
   @Get('exchange')
   async exchange(
-    @Query('code') code: string,
-    @Query('userId', new ParseUUIDPipe()) userId: string,
+    @Query() { code }: ExchangeQueryDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = await this.authService.consumeOAuthCode(code, userId);
+    const user = await this.authService.consumeOAuthCode(code);
 
     const { accessToken, refreshToken } =
       await this.authService.generateTokens(user);
