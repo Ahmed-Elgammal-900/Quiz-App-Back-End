@@ -168,7 +168,6 @@ describe('QuizController (e2e)', () => {
               badgeIcon: expect.any(String),
             }),
           );
-          expect(res.body.data[0]).toHaveProperty('badgeIcon');
         }
       });
   });
