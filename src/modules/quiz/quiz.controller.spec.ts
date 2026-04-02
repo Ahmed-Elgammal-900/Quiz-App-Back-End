@@ -12,6 +12,7 @@ const mockQuizService = {
   startQuiz: jest.fn(),
   insertUserProgress: jest.fn(),
   pauseQuiz: jest.fn(),
+  getActivities: jest.fn(),
   getUserStats: jest.fn(),
   getLeaderboard: jest.fn(),
 };
@@ -54,5 +55,48 @@ describe('QuizController', () => {
     mockQuizService.getLeaderboard.mockResolvedValue({ data: [], meta: {} });
     await controller.getLeaderboard({ page: 1, limit: 10 });
     expect(mockQuizService.getLeaderboard).toHaveBeenCalledWith(1, 10);
+  });
+
+  it('should call getActivities with userId', async () => {
+    mockQuizService.getActivities.mockResolvedValue([]);
+    await controller.getActivities('user-id');
+    expect(mockQuizService.getActivities).toHaveBeenCalledWith('user-id');
+  });
+
+  it('should call getPassedQuizzesNames with userId', async () => {
+    mockQuizService.getPassedQuizzesNames.mockResolvedValue([]);
+    await controller.getPassedQuizzesNames('user-id');
+    expect(mockQuizService.getPassedQuizzesNames).toHaveBeenCalledWith(
+      'user-id',
+    );
+  });
+
+  it('should call getUserStats with userId', async () => {
+    mockQuizService.getUserStats.mockResolvedValue({});
+    await controller.getUserStats('user-id');
+    expect(mockQuizService.getUserStats).toHaveBeenCalledWith('user-id');
+  });
+
+  it('should call getQuizProgress with userId and quizId', async () => {
+    mockQuizService.getQuizProgress.mockResolvedValue(null);
+    await controller.getQuizProgress('user-id', 'quiz-id');
+    expect(mockQuizService.getQuizProgress).toHaveBeenCalledWith(
+      'user-id',
+      'quiz-id',
+    );
+  });
+
+  it('should call insertUserProgress with correct args', async () => {
+    mockQuizService.insertUserProgress.mockResolvedValue({ score: 100 });
+    await controller.insertUserProgress('user-id', 'quiz-id', {
+      questionId: 'q-id',
+      selectedAnswerId: 'a-id',
+    });
+    expect(mockQuizService.insertUserProgress).toHaveBeenCalledWith(
+      'user-id',
+      'quiz-id',
+      'q-id',
+      'a-id',
+    );
   });
 });

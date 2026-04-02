@@ -131,6 +131,26 @@ describe('QuizController (e2e)', () => {
       });
   });
 
+  it('GET /quizzes/activities — should return active activities', async () => {
+    return request(app.getHttpServer())
+      .get('/quizzes/activities')
+      .set('Cookie', cookies)
+      .expect(200)
+      .expect((res) => {
+        expect(Array.isArray(res.body.data)).toBe(true);
+      });
+  });
+
+  it('GET /quizzes/passed — should return passed quiz names', async () => {
+    return request(app.getHttpServer())
+      .get('/quizzes/passed')
+      .set('Cookie', cookies)
+      .expect(200)
+      .expect((res) => {
+        expect(Array.isArray(res.body.data)).toBe(true);
+      });
+  });
+
   it('GET /quizzes/stats — should return user stats', async () => {
     return request(app.getHttpServer())
       .get('/quizzes/stats')

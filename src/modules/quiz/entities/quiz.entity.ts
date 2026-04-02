@@ -15,6 +15,9 @@ export class Quiz {
   @Column({ type: 'int', nullable: false })
   timeInSeconds: number;
 
+  @Column({ type: 'varchar', nullable: true })
+  badgeIcon: string | null;
+
   @OneToMany(() => Question, (question) => question.quiz, {
     cascade: true,
     eager: false,

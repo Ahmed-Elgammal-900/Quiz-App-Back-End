@@ -14,12 +14,15 @@ import {
   ApiCookieAuth,
   ApiParam,
   ApiQuery,
+  ApiOkResponse,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { PaginationDto } from './dto/pagination.dto';
 import { InsertProgressDto } from './dto/insert-progress.dto';
 import { PauseQuizDto } from './dto/pause-quiz.dto';
+import { QuizProgressStatus } from './constants/quiz-progress-status';
 
 @ApiTags('Quizzes')
 @ApiCookieAuth('access_token')
@@ -275,6 +278,52 @@ export class QuizController {
       body.remainingTimeSeconds,
     );
     return { message: 'Quiz paused successfully' };
+  }
+
+  /**
+   * Retrieves all active quiz activities for the authenticated user.
+   *
+   * Returns quizzes that are currently in progress or paused,
+   * sorted by the most recent attempt first.
+   *
+   * @param user - The authenticated user extracted from the JWT token
+   * @returns A list of active quiz progress records with quiz title
+   */
+  @Get('activities')
+  @ApiOperation({
+    summary: 'Get user quiz activities',
+    description:
+      'Returns all quizzes that are currently in progress or paused for the authenticated user, sorted by most recent attempt.',
+  })
+  @ApiOkResponse({
+    description: 'Active quiz activities retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          status: {
+            type: 'string',
+            enum: [QuizProgressStatus.IN_PROGRESS, QuizProgressStatus.PAUSED],
+          },
+          score: { type: 'number', nullable: true },
+          passed: { type: 'boolean' },
+          remainingTimeSeconds: { type: 'number', nullable: true },
+          attemptAt: { type: 'string', format: 'date-time', nullable: true },
+          quiz: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Invalid or missing JWT token' })
+  getActivities(@CurrentUser('id') id: string) {
+    return this.quizService.getActivities(id);
   }
 
   /**
