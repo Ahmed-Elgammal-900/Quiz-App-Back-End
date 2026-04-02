@@ -392,6 +392,9 @@ export class AuthService {
     );
 
     if (!token || token.expiresAt < new Date()) {
+      if (token) {
+        await this.userService.clearToken(TokenType.OAUTH_CODE, token.userId);
+      }
       throw new UnauthorizedException('Invalid or expired code');
     }
 

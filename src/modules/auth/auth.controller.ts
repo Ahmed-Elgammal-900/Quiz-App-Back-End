@@ -523,7 +523,7 @@ export class AuthController {
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: this.configService.get('NODE_ENV') === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: ACCESS_TOKEN_MAX_AGE,
       path: '/',
     });
@@ -531,7 +531,7 @@ export class AuthController {
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: this.configService.get('NODE_ENV') === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: REFRESH_TOKEN_MAX_AGE,
       path: '/',
     });
@@ -546,7 +546,7 @@ export class AuthController {
     const cookieOptions = {
       httpOnly: true,
       secure: this.configService.get('NODE_ENV') === 'production',
-      sameSite: 'lax' as const,
+      sameSite: 'strict' as const,
       path: '/',
     };
 

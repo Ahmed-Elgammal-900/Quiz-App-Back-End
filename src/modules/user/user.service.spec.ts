@@ -466,10 +466,10 @@ describe('UserService', () => {
     it('should use custom token type when provided', async () => {
       mockTokenRepo.increment.mockResolvedValue(undefined);
 
-      await service.incrementAttempts('user-123', TokenType.OAUTH_CODE);
+      await service.incrementAttempts('user-123', TokenType.EMAIL_VERIFY);
 
       expect(mockTokenRepo.increment).toHaveBeenCalledWith(
-        { userId: 'user-123', type: TokenType.OAUTH_CODE },
+        { userId: 'user-123', type: TokenType.EMAIL_VERIFY },
         'attempts',
         1,
       );
