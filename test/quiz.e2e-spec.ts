@@ -138,6 +138,18 @@ describe('QuizController (e2e)', () => {
       .expect(200)
       .expect((res) => {
         expect(Array.isArray(res.body.data)).toBe(true);
+        if (res.body.data.length > 0) {
+          expect(res.body.data[0]).toEqual(
+            expect.objectContaining({
+              id: expect.any(String),
+              status: expect.any(String),
+              passed: expect.any(Boolean),
+              quiz: expect.objectContaining({
+                title: expect.any(String),
+              }),
+            }),
+          );
+        }
       });
   });
 
@@ -148,6 +160,16 @@ describe('QuizController (e2e)', () => {
       .expect(200)
       .expect((res) => {
         expect(Array.isArray(res.body.data)).toBe(true);
+        if (res.body.data.length > 0) {
+          expect(res.body.data[0]).toEqual(
+            expect.objectContaining({
+              quizId: expect.any(String),
+              quizTitle: expect.any(String),
+              badgeIcon: expect.any(String),
+            }),
+          );
+          expect(res.body.data[0]).toHaveProperty('badgeIcon');
+        }
       });
   });
 
