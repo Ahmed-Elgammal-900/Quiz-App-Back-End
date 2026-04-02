@@ -99,6 +99,9 @@ export class UserService {
     user = await this.findOne({ email });
     if (user) {
       user.googleId = googleId;
+      if (!user.isEmailVerified) {
+        user.isEmailVerified = true;
+      }
       if (!user.providers.includes(Provider.GOOGLE)) {
         user.providers = [...user.providers, Provider.GOOGLE];
       }
@@ -110,6 +113,7 @@ export class UserService {
       name,
       googleId,
       providers: [Provider.GOOGLE],
+      isEmailVerified: true,
     });
 
     return await this.userRepository.save(user);

@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CreateAuthDto } from './dto/signup.dto';
 import * as bcrypt from 'bcrypt';
@@ -22,7 +23,6 @@ import {
   REFRESH_TOKEN_TIME,
 } from './constants/auth.constants';
 import { TokenType } from './constants/token-type.constant';
-import { UnauthorizedException } from '@nestjs/common';
 import { UserResponse } from './types/response-types';
 
 @Injectable()
@@ -62,10 +62,6 @@ export class AuthService {
     }
 
     const user = await this.userService.findOrCreateGoogleUser(googleDto);
-
-    if (!user.isEmailVerified) {
-      await this.sendOtp(user.id, user.email, user.name, true);
-    }
 
     return {
       id: user.id,
@@ -367,6 +363,51 @@ export class AuthService {
     }
 
     return { message: 'If email exists, reset link has been sent' };
+  }
+
+  async generateOAuthCode(userId: string) {
+    const OAuthCode = crypto.randomBytes(32).toString('hex');
+    const hashedCode = crypto
+      .createHash('sha256')
+      .update(OAuthCode)
+      .digest('hex');
+
+    await this.userService.saveToken(
+      userId,
+      hashedCode,
+      TokenType.OAUTH_CODE,
+      new Date(Date.now() + 60 * 1000),
+    );
+
+    return OAuthCode;
+  }
+
+  async consumeOAuthCode(code: string) {
+    const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
+
+    const token = await this.userService.getToken(
+      TokenType.OAUTH_CODE,
+      undefined,
+      hashedCode,
+    );
+
+    if (!token || token.expiresAt < new Date()) {
+      if (token) {
+        await this.userService.clearToken(TokenType.OAUTH_CODE, token.userId);
+      }
+      throw new UnauthorizedException('Invalid or expired code');
+    }
+
+    await this.userService.clearToken(TokenType.OAUTH_CODE, token.userId);
+    const user = await this.userService.findOne({ id: token.userId });
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+    return {
+      id: user.id,
+      email: user.email,
+      isEmailVerified: user.isEmailVerified,
+    };
   }
 
   /**

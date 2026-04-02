@@ -6,6 +6,7 @@ import {
   UseGuards,
   Res,
   Patch,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -13,6 +14,7 @@ import {
   ApiResponse,
   ApiCookieAuth,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/signup.dto';
@@ -32,6 +34,7 @@ import {
   ACCESS_TOKEN_MAX_AGE,
   REFRESH_TOKEN_MAX_AGE,
 } from './constants/auth.constants';
+import { ExchangeQueryDto } from './dto/exchange-query.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -64,10 +67,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   @ApiResponse({ status: 400, description: 'Validation error' })
-  async create(
-    @Body() createAuthDto: CreateAuthDto,
-    @Res({ passthrough: true }) _res: Response,
-  ) {
+  async create(@Body() createAuthDto: CreateAuthDto) {
     const user = await this.authService.createUser(createAuthDto);
     return { message: 'signup success', userId: user.id };
   }
@@ -140,12 +140,11 @@ export class AuthController {
 
   /**
    * Handles the Google OAuth2 callback after user consent.
-   * Issues token cookies if the user's email is already verified.
-   * If not verified, an OTP is sent automatically.
+   * Generates a short-lived OAuth code and redirects the client
+   * to the frontend callback URL with the code and userId as query params.
    *
    * @route GET /auth/google/callback
    * @access Public (Google OAuth guard)
-   * @returns A success message and the user's ID
    */
   @Public()
   @UseGuards(AuthGuard('google'))
@@ -153,36 +152,85 @@ export class AuthController {
   @ApiOperation({
     summary: 'Google OAuth2 callback',
     description:
-      'Handles redirect from Google. Issues token cookies if email is verified, otherwise sends OTP.',
+      'Handles redirect from Google. Generates a short-lived OAuth code and redirects to the frontend callback URL.',
   })
   @ApiResponse({
-    status: 200,
-    description: 'Google auth successful or OTP required',
-    schema: {
-      example: {
-        message: 'google auth success',
-        userId: 'uuid',
-        isEmailVerified: true,
-      },
-    },
+    status: 302,
+    description: 'Redirects to frontend callback with OAuth code.',
   })
   async googleCallback(
     @CurrentUser() user: UserResponse,
+    @Res() res: Response,
+  ) {
+    const OAuthCode = await this.authService.generateOAuthCode(user.id);
+    const frontEndOrigin = this.configService.get('FRONT_END_ORIGIN');
+    return res.redirect(`${frontEndOrigin}/api/callback?code=${OAuthCode}`);
+  }
+
+  /**
+   * Exchanges an OAuth authorization code for authenticated session tokens.
+   *
+   * This endpoint is the OAuth 2.0 callback handler. After a user authorizes
+   * the application with a third-party provider, the provider redirects here
+   * with a temporary `code` and the `userId` that initiated the flow.
+   * The code is consumed (single-use), tokens are generated, and set as
+   * HTTP-only cookies on the response.
+   *
+   * @route GET /auth/exchange
+   * @param code - The short-lived OAuth authorization code from the provider.
+   * @param userId - The UUID of the user who initiated the OAuth flow.
+   * @param res - The Express response object used to set auth cookies.
+   * @returns JSON `{ success: true }` on successful exchange.
+   * @throws {UnauthorizedException} If the code is invalid, expired, or already used.
+   * @throws {BadRequestException} If `userId` is not a valid UUID.
+   */
+  @ApiOperation({
+    summary: 'Exchange OAuth code for session tokens',
+    description:
+      'Consumes a one-time OAuth authorization code and issues access/refresh token cookies. ' +
+      'This endpoint is called by the OAuth provider redirect after user authorization.',
+  })
+  @ApiQuery({
+    name: 'code',
+    required: true,
+    type: String,
+    description:
+      'The short-lived OAuth authorization code returned by the provider.',
+    example: '4/0AX4XfWh...',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'OAuth code successfully exchanged. Auth cookies are set on the response.',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request — `code` is missing.',
+  })
+  @ApiResponse({
+    status: 401,
+    description:
+      'Unauthorized — OAuth code is invalid, expired, or has already been used.',
+  })
+  @Public()
+  @Get('exchange')
+  async exchange(
+    @Query() { code }: ExchangeQueryDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    if (user.isEmailVerified) {
-      const { accessToken, refreshToken } =
-        await this.authService.generateTokens(user);
-      this.setTokenCookies(res, accessToken, refreshToken);
-    }
+    const user = await this.authService.consumeOAuthCode(code);
 
-    return {
-      message: user.isEmailVerified
-        ? 'google auth success'
-        : 'otp verification required',
-      userId: user.id,
-      isEmailVerified: user.isEmailVerified,
-    };
+    const { accessToken, refreshToken } =
+      await this.authService.generateTokens(user);
+
+    this.setTokenCookies(res, accessToken, refreshToken);
+    return { success: true };
   }
 
   /**
@@ -250,7 +298,6 @@ export class AuthController {
   async changePassword(
     @CurrentUser() user: UserResponse,
     @Body() updatePasswordDto: UpdatePasswordDto,
-    @Res({ passthrough: true }) _res: Response,
   ) {
     await this.authService.changePassword(user.id, updatePasswordDto);
 
@@ -280,13 +327,19 @@ export class AuthController {
       example: { message: 'If this email exists, a reset link has been sent' },
     },
   })
-  async forgetPassword(
-    @Body() updateAuthDto: ForgetPasswordDto,
-    @Res({ passthrough: true }) _res: Response,
-  ) {
+  async forgetPassword(@Body() updateAuthDto: ForgetPasswordDto) {
     return await this.authService.forgotPassword(updateAuthDto.email);
   }
 
+  /**
+   * Resets a user's password using a valid reset token from email.
+   * Issues token cookies if the email is already verified.
+   * If not verified, returns userId so the client can redirect to OTP verification.
+   *
+   * @route POST /auth/reset-password
+   * @access Public
+   * @returns A success message, isEmailVerified flag, and userId
+   */
   @Public()
   @Post('reset-password')
   @ApiOperation({
@@ -382,11 +435,41 @@ export class AuthController {
   @ApiBody({ type: ResendOtpDto })
   @ApiResponse({ status: 200, description: 'OTP resent successfully' })
   @ApiResponse({
-    status: 429,
-    description: 'Too many requests — cooldown active',
+    status: 400,
+    description: 'Cooldown active or email already verified.',
   })
   async resendOtp(@Body() dto: ResendOtpDto) {
     return await this.authService.resendOtp(dto.id);
+  }
+
+  /**
+   * Verifies the validity of the access token.
+   *
+   * The global JWT guard intercepts this request and validates
+   * the access token automatically. If the token is invalid or
+   * expired, the guard returns 401 before reaching this handler.
+   *
+   * @route POST /auth/verify-access-token
+   * @returns `{ success: true }` if the token is valid
+   */
+  @ApiOperation({ summary: 'Verify access token' })
+  @ApiCookieAuth('access_token')
+  @ApiResponse({
+    status: 200,
+    description: 'Token is valid',
+    schema: { example: { success: true } },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized — token is missing, invalid, or expired.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — email is not verified.',
+  })
+  @Post('verify-access-token')
+  async verifyAccessToken() {
+    return { success: true };
   }
 
   /**
@@ -450,9 +533,9 @@ export class AuthController {
   }
 
   /**
-   * Clear cookies with options
-   * @param res server response
-   * @returns void
+   * Clears access and refresh token cookies from the browser.
+   *
+   * @param res - The Express response object
    */
   private clearTokenCookies(res: Response) {
     const cookieOptions = {

@@ -35,7 +35,7 @@ describe('UserController', () => {
     jest.clearAllMocks();
   });
 
-  describe('DELETE /user/delete', () => {
+  describe('DELETE /user', () => {
     it('should delete user and clear cookies', async () => {
       mockUserService.deleteUser.mockResolvedValue({
         message: 'Account deleted successfully',
@@ -57,6 +57,18 @@ describe('UserController', () => {
         'refresh_token',
         expect.any(Object),
       );
+    });
+
+    it('should propagate error if deleteUser throws', async () => {
+      mockUserService.deleteUser.mockRejectedValue(new Error('Not found'));
+
+      const res = mockResponse();
+      await expect(
+        controller.remove(
+          { id: 'user-123', email: 'test@test.com' } as any,
+          res,
+        ),
+      ).rejects.toThrow('Not found');
     });
 
     it('should clear cookies with correct options in development', async () => {

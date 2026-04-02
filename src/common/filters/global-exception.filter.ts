@@ -17,6 +17,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
 
+    if (request.url.includes('/auth/google/callback')) {
+      this.logger.error(
+        `${request.method} ${request.url} oauth callback failed`,
+        exception instanceof Error ? exception.stack : String(exception),
+      );
+      response.redirect(
+        `${process.env.FRONT_END_ORIGIN}/error?message=oauth_failed`,
+      );
+      return;
+    }
+
     const status =
       exception instanceof HttpException
         ? exception.getStatus()

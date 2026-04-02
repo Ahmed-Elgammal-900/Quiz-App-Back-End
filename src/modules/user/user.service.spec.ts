@@ -36,6 +36,7 @@ const mockDeletedUserRepo = {
   exists: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
+  delete: jest.fn(),
 };
 
 const mockDataSource = {
@@ -63,6 +64,8 @@ describe('UserService', () => {
     jest.clearAllMocks();
   });
 
+  // createUser
+
   describe('createUser', () => {
     it('should create and return a new user', async () => {
       mockDeletedUserRepo.exists.mockResolvedValue(false);
@@ -83,6 +86,7 @@ describe('UserService', () => {
         name: 'Test',
         email: 'test@test.com',
         password: 'Pass123!',
+        confirmPassword: 'Pass123!',
       });
 
       expect(result).toBeDefined();
@@ -97,6 +101,7 @@ describe('UserService', () => {
           name: 'Test',
           email: 'test@test.com',
           password: 'Pass123!',
+          confirmPassword: 'Pass123!',
         }),
       ).rejects.toThrow(ConflictException);
     });
@@ -110,10 +115,13 @@ describe('UserService', () => {
           name: 'Test',
           email: 'test@test.com',
           password: 'Pass123!',
+          confirmPassword: 'Pass123!',
         }),
       ).rejects.toThrow(ConflictException);
     });
   });
+
+  // findOne
 
   describe('findOne', () => {
     it('should return user if found', async () => {
@@ -134,6 +142,8 @@ describe('UserService', () => {
     });
   });
 
+  // findDeletedByEmail
+
   describe('findDeletedByEmail', () => {
     it('should return true if deleted user exists', async () => {
       mockDeletedUserRepo.exists.mockResolvedValue(true);
@@ -151,6 +161,8 @@ describe('UserService', () => {
       expect(result).toBe(false);
     });
   });
+
+  // findOrCreateGoogleUser
 
   describe('findOrCreateGoogleUser', () => {
     const profile = {
@@ -173,6 +185,7 @@ describe('UserService', () => {
         id: 'user-123',
         email: 'google@test.com',
         googleId: null,
+        isEmailVerified: true,
         providers: [],
       };
       mockUserRepo.findOne
@@ -184,6 +197,51 @@ describe('UserService', () => {
 
       expect(result.googleId).toBe('google-123');
       expect(mockUserRepo.save).toHaveBeenCalledTimes(1);
+    });
+
+    it('should set isEmailVerified when linking unverified email user', async () => {
+      const user = {
+        id: 'user-123',
+        email: 'google@test.com',
+        googleId: null,
+        isEmailVerified: false,
+        providers: [],
+      };
+      mockUserRepo.findOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(user);
+      mockUserRepo.save.mockResolvedValue({
+        ...user,
+        googleId: 'google-123',
+        isEmailVerified: true,
+      });
+
+      await service.findOrCreateGoogleUser(profile);
+
+      const savedUser = mockUserRepo.save.mock.calls[0][0];
+      expect(savedUser.isEmailVerified).toBe(true);
+    });
+
+    it('should add google provider when linking existing user', async () => {
+      const user = {
+        id: 'user-123',
+        email: 'google@test.com',
+        googleId: null,
+        isEmailVerified: true,
+        providers: [],
+      };
+      mockUserRepo.findOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(user);
+      mockUserRepo.save.mockResolvedValue({
+        ...user,
+        providers: [Provider.GOOGLE],
+      });
+
+      await service.findOrCreateGoogleUser(profile);
+
+      const savedUser = mockUserRepo.save.mock.calls[0][0];
+      expect(savedUser.providers).toContain(Provider.GOOGLE);
     });
 
     it('should create new user if not found', async () => {
@@ -202,6 +260,8 @@ describe('UserService', () => {
       expect(mockUserRepo.create).toHaveBeenCalledTimes(1);
     });
   });
+
+  // deleteUser
 
   describe('deleteUser', () => {
     it('should delete user and add to deleted list', async () => {
@@ -238,6 +298,8 @@ describe('UserService', () => {
     });
   });
 
+  // updateUser
+
   describe('updateUser', () => {
     it('should update user successfully', async () => {
       mockUserRepo.update.mockResolvedValue({ affected: 1 });
@@ -258,6 +320,8 @@ describe('UserService', () => {
     });
   });
 
+  // saveToken
+
   describe('saveToken', () => {
     it('should upsert token', async () => {
       mockTokenRepo.upsert.mockResolvedValue(undefined);
@@ -271,7 +335,36 @@ describe('UserService', () => {
 
       expect(mockTokenRepo.upsert).toHaveBeenCalledTimes(1);
     });
+
+    it('should upsert token with correct shape', async () => {
+      mockTokenRepo.upsert.mockResolvedValue(undefined);
+      const expiresAt = new Date();
+
+      await service.saveToken(
+        'user-123',
+        'hashed-token',
+        TokenType.REFRESH,
+        expiresAt,
+      );
+
+      expect(mockTokenRepo.upsert).toHaveBeenCalledWith(
+        {
+          userId: 'user-123',
+          token: 'hashed-token',
+          type: TokenType.REFRESH,
+          expiresAt,
+          attempts: 0,
+          lastSentAt: expect.any(Date),
+        },
+        {
+          conflictPaths: ['userId', 'type'],
+          skipUpdateIfNoValuesChanged: true,
+        },
+      );
+    });
   });
+
+  // getToken
 
   describe('getToken', () => {
     it('should return token by userId', async () => {
@@ -296,12 +389,34 @@ describe('UserService', () => {
       expect(result).toEqual(token);
     });
 
+    it('should return token when both userId and tokenValue provided', async () => {
+      const token = { id: 'token-123', type: TokenType.REFRESH };
+      mockTokenRepo.findOne.mockResolvedValue(token);
+
+      const result = await service.getToken(
+        TokenType.REFRESH,
+        'user-123',
+        'hashed-token',
+      );
+
+      expect(result).toEqual(token);
+      expect(mockTokenRepo.findOne).toHaveBeenCalledWith({
+        where: {
+          type: TokenType.REFRESH,
+          userId: 'user-123',
+          token: 'hashed-token',
+        },
+      });
+    });
+
     it('should throw if neither userId nor tokenValue provided', async () => {
       await expect(service.getToken(TokenType.REFRESH)).rejects.toThrow(
         BadRequestException,
       );
     });
   });
+
+  // clearToken
 
   describe('clearToken', () => {
     it('should delete token by userId', async () => {
@@ -315,12 +430,25 @@ describe('UserService', () => {
       });
     });
 
+    it('should delete token by tokenValue', async () => {
+      mockTokenRepo.delete.mockResolvedValue(undefined);
+
+      await service.clearToken(TokenType.REFRESH, undefined, 'hashed-token');
+
+      expect(mockTokenRepo.delete).toHaveBeenCalledWith({
+        type: TokenType.REFRESH,
+        token: 'hashed-token',
+      });
+    });
+
     it('should throw if neither userId nor tokenValue provided', async () => {
       await expect(service.clearToken(TokenType.REFRESH)).rejects.toThrow(
         BadRequestException,
       );
     });
   });
+
+  // incrementAttempts
 
   describe('incrementAttempts', () => {
     it('should increment attempts for user', async () => {
@@ -334,7 +462,21 @@ describe('UserService', () => {
         1,
       );
     });
+
+    it('should use custom token type when provided', async () => {
+      mockTokenRepo.increment.mockResolvedValue(undefined);
+
+      await service.incrementAttempts('user-123', TokenType.EMAIL_VERIFY);
+
+      expect(mockTokenRepo.increment).toHaveBeenCalledWith(
+        { userId: 'user-123', type: TokenType.EMAIL_VERIFY },
+        'attempts',
+        1,
+      );
+    });
   });
+
+  // verifyUser
 
   describe('verifyUser', () => {
     it('should verify user and clear token', async () => {
@@ -350,8 +492,11 @@ describe('UserService', () => {
     });
   });
 
+  // deleteTestUser
+
   describe('deleteTestUser', () => {
-    it('should delete user by email', async () => {
+    it('should delete user by email in test environment', async () => {
+      process.env.NODE_ENV = 'test';
       mockUserRepo.delete.mockResolvedValue(undefined);
 
       await service.deleteTestUser('test@test.com');
@@ -359,6 +504,41 @@ describe('UserService', () => {
       expect(mockUserRepo.delete).toHaveBeenCalledWith({
         email: 'test@test.com',
       });
+    });
+
+    it('should throw in non-test environment', async () => {
+      process.env.NODE_ENV = 'production';
+
+      await expect(service.deleteTestUser('test@test.com')).rejects.toThrow(
+        'deleteTestUser only in test environment',
+      );
+
+      process.env.NODE_ENV = 'test';
+    });
+  });
+
+  // deleteTestDeletedEmail
+
+  describe('deleteTestDeletedEmail', () => {
+    it('should delete deleted user record by email in test environment', async () => {
+      process.env.NODE_ENV = 'test';
+      mockDeletedUserRepo.delete.mockResolvedValue(undefined);
+
+      await service.deleteTestDeletedEmail('test@test.com');
+
+      expect(mockDeletedUserRepo.delete).toHaveBeenCalledWith({
+        email: 'test@test.com',
+      });
+    });
+
+    it('should throw in non-test environment', async () => {
+      process.env.NODE_ENV = 'production';
+
+      await expect(
+        service.deleteTestDeletedEmail('test@test.com'),
+      ).rejects.toThrow('deleteTestDeletedEmail only in test environment');
+
+      process.env.NODE_ENV = 'test';
     });
   });
 });
