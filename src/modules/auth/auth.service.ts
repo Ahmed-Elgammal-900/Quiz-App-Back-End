@@ -401,7 +401,7 @@ export class AuthService {
     await this.userService.clearToken(TokenType.OAUTH_CODE, token.userId);
     const user = await this.userService.findOne({ id: token.userId });
     if (!user) {
-      throw new ConflictException('user not found');
+      throw new NotFoundException('user not found');
     }
     return {
       id: user.id,

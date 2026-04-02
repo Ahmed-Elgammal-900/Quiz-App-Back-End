@@ -198,14 +198,6 @@ export class AuthController {
       'The short-lived OAuth authorization code returned by the provider.',
     example: '4/0AX4XfWh...',
   })
-  @ApiQuery({
-    name: 'userId',
-    required: true,
-    type: String,
-    format: 'uuid',
-    description: 'UUID of the user who initiated the OAuth flow.',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  })
   @ApiResponse({
     status: 200,
     description:
@@ -219,8 +211,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      'Invalid request — `userId` is not a valid UUID or `code` is missing.',
+    description: 'Invalid request — `code` is missing.',
   })
   @ApiResponse({
     status: 401,
@@ -471,6 +462,10 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Unauthorized — token is missing, invalid, or expired.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — email is not verified.',
   })
   @Post('verify-access-token')
   async verifyAccessToken() {
