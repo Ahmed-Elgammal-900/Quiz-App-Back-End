@@ -1,4 +1,10 @@
-import { Controller, Delete, Res } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Res,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -19,6 +25,36 @@ export class UserController {
     private configService: ConfigService,
     private readonly userService: UserService,
   ) {}
+
+  /**
+   * Retrieve the authenticated user's profile information.
+   * @param id - The unique identifier of the current user, extracted from the request.
+   * @returns An object containing the user's name and email.
+   * @throws {NotFoundException} If the user does not exist in the database.
+   */
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved successfully.',
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', example: 'example' },
+        email: { type: 'string', example: 'example@email.com' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  @Get()
+  async getUser(@CurrentUser('id') id: string) {
+    const user = await this.userService.findOne({ id });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    return { name: user.name, email: user.email };
+  }
 
   /**
    * Delete a user from database and remove cookies

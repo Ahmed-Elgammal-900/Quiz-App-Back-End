@@ -2,16 +2,20 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { ConfigService } from '@nestjs/config';
+import { NotFoundException } from '@nestjs/common';
 import { Response } from 'express';
 
-const mockResponse = () => {
-  const res: Partial<Response> = {
-    clearCookie: jest.fn(),
-  };
-  return res as Response;
-};
+const mockUser = {
+  id: 'user-123',
+  name: 'Test User',
+  email: 'test-user@example.com',
+} as any;
+
+const mockResponse = (): Response =>
+  ({ clearCookie: jest.fn() }) as unknown as Response;
 
 const mockUserService = {
+  findOne: jest.fn(),
   deleteUser: jest.fn(),
 };
 
@@ -35,19 +39,36 @@ describe('UserController', () => {
     jest.clearAllMocks();
   });
 
+  describe('GET /user', () => {
+    it('should return name and email when user exists', async () => {
+      mockUserService.findOne.mockResolvedValue(mockUser);
+
+      const result = await controller.getUser(mockUser.id);
+
+      expect(result).toEqual({ name: mockUser.name, email: mockUser.email });
+      expect(mockUserService.findOne).toHaveBeenCalledWith({ id: mockUser.id });
+    });
+
+    it('should throw NotFoundException when user does not exist', async () => {
+      mockUserService.findOne.mockResolvedValue(null);
+
+      await expect(controller.getUser(mockUser.id)).rejects.toThrow(
+        new NotFoundException(`User with ID ${mockUser.id} not found`),
+      );
+    });
+  });
+
   describe('DELETE /user', () => {
-    it('should delete user and clear cookies', async () => {
+    it('should delete user and clear both cookies', async () => {
       mockUserService.deleteUser.mockResolvedValue({
         message: 'Account deleted successfully',
       });
 
       const res = mockResponse();
-      const user = { id: 'user-123', email: 'test@test.com' } as any;
-
-      const result = await controller.remove(user, res);
+      const result = await controller.remove(mockUser, res);
 
       expect(result).toEqual({ message: 'Account deleted successfully' });
-      expect(mockUserService.deleteUser).toHaveBeenCalledWith(user);
+      expect(mockUserService.deleteUser).toHaveBeenCalledWith(mockUser);
       expect(res.clearCookie).toHaveBeenCalledTimes(2);
       expect(res.clearCookie).toHaveBeenCalledWith(
         'access_token',
@@ -60,28 +81,19 @@ describe('UserController', () => {
     });
 
     it('should propagate error if deleteUser throws', async () => {
-      mockUserService.deleteUser.mockRejectedValue(new Error('Not found'));
+      mockUserService.deleteUser.mockRejectedValue(new Error('DB failure'));
 
-      const res = mockResponse();
-      await expect(
-        controller.remove(
-          { id: 'user-123', email: 'test@test.com' } as any,
-          res,
-        ),
-      ).rejects.toThrow('Not found');
+      await expect(controller.remove(mockUser, mockResponse())).rejects.toThrow(
+        'DB failure',
+      );
     });
 
-    it('should clear cookies with correct options in development', async () => {
-      mockUserService.deleteUser.mockResolvedValue({
-        message: 'Account deleted successfully',
-      });
+    it('should clear cookies with secure: false in development', async () => {
+      mockUserService.deleteUser.mockResolvedValue({ message: 'ok' });
       mockConfigService.get.mockReturnValue('development');
 
       const res = mockResponse();
-      await controller.remove(
-        { id: 'user-123', email: 'test@test.com' } as any,
-        res,
-      );
+      await controller.remove(mockUser, res);
 
       expect(res.clearCookie).toHaveBeenCalledWith('access_token', {
         httpOnly: true,
@@ -91,17 +103,12 @@ describe('UserController', () => {
       });
     });
 
-    it('should set secure cookies in production', async () => {
-      mockUserService.deleteUser.mockResolvedValue({
-        message: 'Account deleted successfully',
-      });
+    it('should clear cookies with secure: true in production', async () => {
+      mockUserService.deleteUser.mockResolvedValue({ message: 'ok' });
       mockConfigService.get.mockReturnValue('production');
 
       const res = mockResponse();
-      await controller.remove(
-        { id: 'user-123', email: 'test@test.com' } as any,
-        res,
-      );
+      await controller.remove(mockUser, res);
 
       expect(res.clearCookie).toHaveBeenCalledWith('access_token', {
         httpOnly: true,
