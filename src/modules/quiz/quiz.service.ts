@@ -105,18 +105,23 @@ export class QuizService {
 
   /**
    * Retrieves the names and IDs of all quizzes a user has passed.
-   * @param userId - The ID of the user
+   *
+   * @param userId - The UUID of the user
    * @returns List of passed quizzes with their IDs and titles
    */
-  async getPassedQuizzesNames(userId: string) {
-    return await this.userQuizProgressRepo
+  async getPassedQuizzesNames(
+    userId: string,
+  ): Promise<{ quizId: string; quizTitle: string; badgeIcon: string }[]> {
+    return this.userQuizProgressRepo
       .createQueryBuilder('progress')
       .select('progress.quizId', 'quizId')
       .addSelect('quiz.title', 'quizTitle')
+      .addSelect('quiz.badgeIcon', 'badgeIcon')
       .innerJoin('progress.quiz', 'quiz')
       .where('progress.userId = :userId', { userId })
       .andWhere('progress.passed = :passed', { passed: true })
-      .getRawMany();
+      .orderBy('quiz.title', 'ASC')
+      .getRawMany<{ quizId: string; quizTitle: string; badgeIcon: string }>();
   }
 
   /**
@@ -341,6 +346,37 @@ export class QuizService {
       },
       ['userId', 'quizId'],
     );
+  }
+
+  /**
+   * Retrieves all active quiz activities for a given user.
+   *
+   * Fetches quizzes that are currently in progress or paused,
+   * sorted by the most recent attempt first.
+   *
+   * @param userId - The UUID of the user whose activities are being fetched
+   * @returns A list of {@link UserQuizProgress} records containing progress status and quiz title
+   */
+  async getActivities(userId: string) {
+    return this.userQuizProgressRepo.find({
+      where: [
+        { userId, status: QuizProgressStatus.IN_PROGRESS },
+        { userId, status: QuizProgressStatus.PAUSED },
+      ],
+      select: {
+        id: true,
+        status: true,
+        score: true,
+        passed: true,
+        remainingTimeSeconds: true,
+        attemptAt: true,
+        quiz: {
+          title: true,
+        },
+      },
+      relations: ['quiz'],
+      order: { attemptAt: { direction: 'DESC', nulls: 'LAST' } },
+    });
   }
 
   /**

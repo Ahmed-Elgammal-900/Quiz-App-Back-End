@@ -131,6 +131,47 @@ describe('QuizController (e2e)', () => {
       });
   });
 
+  it('GET /quizzes/activities — should return active activities', async () => {
+    return request(app.getHttpServer())
+      .get('/quizzes/activities')
+      .set('Cookie', cookies)
+      .expect(200)
+      .expect((res) => {
+        expect(Array.isArray(res.body.data)).toBe(true);
+        if (res.body.data.length > 0) {
+          expect(res.body.data[0]).toEqual(
+            expect.objectContaining({
+              id: expect.any(String),
+              status: expect.any(String),
+              passed: expect.any(Boolean),
+              quiz: expect.objectContaining({
+                title: expect.any(String),
+              }),
+            }),
+          );
+        }
+      });
+  });
+
+  it('GET /quizzes/passed — should return passed quiz names', async () => {
+    return request(app.getHttpServer())
+      .get('/quizzes/passed')
+      .set('Cookie', cookies)
+      .expect(200)
+      .expect((res) => {
+        expect(Array.isArray(res.body.data)).toBe(true);
+        if (res.body.data.length > 0) {
+          expect(res.body.data[0]).toEqual(
+            expect.objectContaining({
+              quizId: expect.any(String),
+              quizTitle: expect.any(String),
+              badgeIcon: expect.any(String),
+            }),
+          );
+        }
+      });
+  });
+
   it('GET /quizzes/stats — should return user stats', async () => {
     return request(app.getHttpServer())
       .get('/quizzes/stats')

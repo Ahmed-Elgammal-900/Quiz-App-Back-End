@@ -220,6 +220,92 @@ describe('QuizService', () => {
     });
   });
 
+  describe('getActivities', () => {
+    it('should return in progress and paused activities', async () => {
+      const mockActivities = [
+        {
+          id: 'uuid-1',
+          status: QuizProgressStatus.IN_PROGRESS,
+          score: null,
+          passed: false,
+          remainingTimeSeconds: null,
+          attemptAt: new Date(),
+          quiz: { title: 'JavaScript Basics' },
+        },
+        {
+          id: 'uuid-2',
+          status: QuizProgressStatus.PAUSED,
+          score: null,
+          passed: false,
+          remainingTimeSeconds: 120,
+          attemptAt: new Date(),
+          quiz: { title: 'TypeScript Advanced' },
+        },
+      ];
+
+      userQuizProgressRepo.find.mockResolvedValue(mockActivities);
+
+      const result = await service.getActivities('user-id');
+
+      expect(userQuizProgressRepo.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.arrayContaining([
+            { userId: 'user-id', status: QuizProgressStatus.IN_PROGRESS },
+            { userId: 'user-id', status: QuizProgressStatus.PAUSED },
+          ]),
+        }),
+      );
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return empty array if no active activities', async () => {
+      userQuizProgressRepo.find.mockResolvedValue([]);
+      const result = await service.getActivities('user-id');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getPassedQuizzesNames', () => {
+    it('should return passed quiz names', async () => {
+      const mockPassed = [
+        {
+          quizId: 'quiz-1',
+          quizTitle: 'JavaScript Basics',
+          badgeIcon: 'javascript',
+        },
+        {
+          quizId: 'quiz-2',
+          quizTitle: 'TypeScript Advanced',
+          badgeIcon: 'typescript',
+        },
+      ];
+
+      userQuizProgressRepo
+        .createQueryBuilder()
+        .getRawMany.mockResolvedValue(mockPassed);
+
+      const result = await service.getPassedQuizzesNames('user-id');
+
+      expect(result).toEqual(mockPassed);
+      expect(
+        userQuizProgressRepo.createQueryBuilder().where,
+      ).toHaveBeenCalledWith('progress.userId = :userId', {
+        userId: 'user-id',
+      });
+      expect(
+        userQuizProgressRepo.createQueryBuilder().andWhere,
+      ).toHaveBeenCalledWith('progress.passed = :passed', { passed: true });
+    });
+
+    it('should return empty array if no passed quizzes', async () => {
+      userQuizProgressRepo
+        .createQueryBuilder()
+        .getRawMany.mockResolvedValue([]);
+      const result = await service.getPassedQuizzesNames('user-id');
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('pauseQuiz', () => {
     it('should save paused status with remaining time', async () => {
       userQuizProgressRepo.findOne.mockResolvedValue({
