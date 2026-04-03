@@ -15,36 +15,36 @@ import { User } from '../../user/entities/user.entity';
 @Unique(['userId', 'quizId', 'questionId'])
 export class UserQuizAnswer {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid', nullable: false })
-  userId: string;
+  userId!: string;
 
   @Column({ type: 'uuid', nullable: false })
-  quizId: string;
+  quizId!: string;
 
   @Column({ type: 'uuid', nullable: false })
-  questionId: string;
+  questionId!: string;
 
   @Column({ type: 'uuid', nullable: false })
-  selectedAnswerId: string;
+  selectedAnswerId!: string;
 
   @Column({ type: 'boolean', default: false })
-  isCorrect: boolean;
+  isCorrect!: boolean;
 
   @ManyToOne(() => Quiz, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'quizId' })
-  quiz: Quiz;
+  quiz!: Quiz;
 
   @ManyToOne(() => Question, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'questionId' })
-  question: Question;
+  question!: Question;
 
   @ManyToOne(() => Answer, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'selectedAnswerId' })
-  selectedAnswer: Answer;
+  selectedAnswer!: Answer;
 
   @ManyToOne(() => User, (user) => user.quizAnswers, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user!: User;
 }

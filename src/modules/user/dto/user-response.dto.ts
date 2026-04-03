@@ -7,26 +7,26 @@ export class UserResponseDto {
     example: 'a3bb189e-8bf9-3888-9912-ace4e6543002',
   })
   @Expose()
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: 'Email address of the user',
     example: 'johndoe@gmail.com',
   })
   @Expose()
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'Full name of the user',
     example: 'John Doe',
   })
   @Expose()
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Whether the user has verified their email address',
     example: true,
   })
   @Expose()
-  isEmailVerified: boolean;
+  isEmailVerified!: boolean;
 }

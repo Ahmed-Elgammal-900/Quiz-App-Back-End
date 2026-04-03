@@ -4,23 +4,23 @@ import { Question } from './question.entity';
 @Entity('quizzes')
 export class Quiz {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  title: string;
+  title!: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string | null;
+  description!: string | null;
 
   @Column({ type: 'int', nullable: false })
-  timeInSeconds: number;
+  timeInSeconds!: number;
 
   @Column({ type: 'varchar', nullable: true })
-  badgeIcon: string | null;
+  badgeIcon!: string | null;
 
   @OneToMany(() => Question, (question) => question.quiz, {
     cascade: true,
     eager: false,
   })
-  questions: Question[];
+  questions!: Question[];
 }

@@ -13,5 +13,5 @@ export class ResetPasswordDto extends OmitType(CreateAuthDto, [
   })
   @IsNotEmpty()
   @IsString()
-  resetToken: string;
+  resetToken!: string;
 }

@@ -20,7 +20,7 @@ export class CreateAuthDto {
   })
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'User email address',
@@ -28,7 +28,7 @@ export class CreateAuthDto {
   })
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: `Password must be ${MIN_PASSWORD_LENGTH}–${MAX_PASSWORD_LENGTH} characters and contain uppercase, lowercase, number, and special character`,
@@ -48,11 +48,11 @@ export class CreateAuthDto {
     message:
       'Password must contain upper, lower, number, and special character',
   })
-  password: string;
+  password!: string;
 
   @ApiProperty({ example: 'Password@123' })
   @IsNotEmpty()
   @IsString()
   @Match('password')
-  confirmPassword: string;
+  confirmPassword!: string;
 }

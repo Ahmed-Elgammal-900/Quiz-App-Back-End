@@ -8,7 +8,7 @@ export class PauseQuizDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  pausedAtQuestionId: string;
+  pausedAtQuestionId!: string;
 
   @ApiProperty({
     description: 'Remaining time in seconds when the quiz was paused',
@@ -18,5 +18,5 @@ export class PauseQuizDto {
   @IsInt()
   @Min(0)
   @IsNotEmpty()
-  remainingTimeSeconds: number;
+  remainingTimeSeconds!: number;
 }

@@ -19,7 +19,7 @@ export class UpdatePasswordDto {
   })
   @IsString()
   @IsNotEmpty()
-  currentPassword: string;
+  currentPassword!: string;
 
   @ApiProperty({
     description: `New password. Must be ${MIN_PASSWORD_LENGTH}–${MAX_PASSWORD_LENGTH} characters and contain uppercase, lowercase, number, and special character`,
@@ -39,7 +39,7 @@ export class UpdatePasswordDto {
     message:
       'Password must contain upper, lower, number, and special character',
   })
-  newPassword: string;
+  newPassword!: string;
 
   @ApiProperty({
     description: 'Must match newPassword exactly',
@@ -48,5 +48,5 @@ export class UpdatePasswordDto {
   @IsNotEmpty()
   @IsString()
   @Match('newPassword', { message: 'Passwords do not match' })
-  confirmPassword: string;
+  confirmPassword!: string;
 }

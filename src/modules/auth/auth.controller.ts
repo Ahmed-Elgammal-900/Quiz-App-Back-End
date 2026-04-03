@@ -184,6 +184,8 @@ export class AuthController {
    * @throws {UnauthorizedException} If the code is invalid, expired, or already used.
    * @throws {BadRequestException} If `userId` is not a valid UUID.
    */
+  @Public()
+  @Get('exchange')
   @ApiOperation({
     summary: 'Exchange OAuth code for session tokens',
     description:
@@ -218,8 +220,6 @@ export class AuthController {
     description:
       'Unauthorized — OAuth code is invalid, expired, or has already been used.',
   })
-  @Public()
-  @Get('exchange')
   async exchange(
     @Query() { code }: ExchangeQueryDto,
     @Res({ passthrough: true }) res: Response,
@@ -452,6 +452,7 @@ export class AuthController {
    * @route POST /auth/verify-access-token
    * @returns `{ success: true }` if the token is valid
    */
+  @Post('verify-access-token')
   @ApiOperation({ summary: 'Verify access token' })
   @ApiCookieAuth('access_token')
   @ApiResponse({
@@ -467,7 +468,6 @@ export class AuthController {
     status: 403,
     description: 'Forbidden — email is not verified.',
   })
-  @Post('verify-access-token')
   async verifyAccessToken() {
     return { success: true };
   }

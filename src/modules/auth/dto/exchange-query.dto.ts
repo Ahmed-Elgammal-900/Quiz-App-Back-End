@@ -9,5 +9,5 @@ export class ExchangeQueryDto {
   })
   @IsString()
   @IsNotEmpty()
-  code: string;
+  code!: string;
 }
