@@ -6,7 +6,7 @@ const mockQuizService = {
   getQuizzes: jest.fn(),
   getQuestionsByQuiz: jest.fn(),
   getAnswersByQuestion: jest.fn(),
-  getPassedQuizzesNames: jest.fn(),
+  getPassedQuizzesBadges: jest.fn(),
   getUserQuizAnswer: jest.fn(),
   getQuizProgress: jest.fn(),
   startQuiz: jest.fn(),
@@ -64,9 +64,9 @@ describe('QuizController', () => {
   });
 
   it('should call getPassedQuizzesNames with userId', async () => {
-    mockQuizService.getPassedQuizzesNames.mockResolvedValue([]);
+    mockQuizService.getPassedQuizzesBadges.mockResolvedValue([]);
     await controller.getPassedQuizzesNames('user-id');
-    expect(mockQuizService.getPassedQuizzesNames).toHaveBeenCalledWith(
+    expect(mockQuizService.getPassedQuizzesBadges).toHaveBeenCalledWith(
       'user-id',
     );
   });

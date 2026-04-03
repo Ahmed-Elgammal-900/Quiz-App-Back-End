@@ -18,6 +18,9 @@ export class Quiz {
   @Column({ type: 'varchar', nullable: true })
   badgeIcon!: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  badgeTitle!: string | null;
+
   @OneToMany(() => Question, (question) => question.quiz, {
     cascade: true,
     eager: false,

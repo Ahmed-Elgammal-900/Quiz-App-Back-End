@@ -164,8 +164,8 @@ describe('QuizController (e2e)', () => {
           expect(res.body.data[0]).toEqual(
             expect.objectContaining({
               quizId: expect.any(String),
-              quizTitle: expect.any(String),
               badgeIcon: expect.any(String),
+              badgeTitle: expect.any(String),
             }),
           );
         }

@@ -109,19 +109,27 @@ export class QuizService {
    * @param userId - The UUID of the user
    * @returns List of passed quizzes with their IDs and titles
    */
-  async getPassedQuizzesNames(
-    userId: string,
-  ): Promise<{ quizId: string; quizTitle: string; badgeIcon: string }[]> {
+  async getPassedQuizzesBadges(userId: string): Promise<
+    {
+      quizId: string;
+      badgeIcon: string;
+      badgeTitle: string;
+    }[]
+  > {
     return this.userQuizProgressRepo
       .createQueryBuilder('progress')
       .select('progress.quizId', 'quizId')
-      .addSelect('quiz.title', 'quizTitle')
       .addSelect('quiz.badgeIcon', 'badgeIcon')
+      .addSelect('quiz.badgeTitle', 'badgeTitle')
       .innerJoin('progress.quiz', 'quiz')
       .where('progress.userId = :userId', { userId })
       .andWhere('progress.passed = :passed', { passed: true })
       .orderBy('quiz.title', 'ASC')
-      .getRawMany<{ quizId: string; quizTitle: string; badgeIcon: string }>();
+      .getRawMany<{
+        quizId: string;
+        badgeIcon: string;
+        badgeTitle: string;
+      }>();
   }
 
   /**

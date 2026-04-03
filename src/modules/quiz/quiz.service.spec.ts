@@ -270,13 +270,13 @@ describe('QuizService', () => {
       const mockPassed = [
         {
           quizId: 'quiz-1',
-          quizTitle: 'JavaScript Basics',
           badgeIcon: 'javascript',
+          badgeTitle: 'javascript title',
         },
         {
           quizId: 'quiz-2',
-          quizTitle: 'TypeScript Advanced',
           badgeIcon: 'typescript',
+          badgeTitle: 'typescript title',
         },
       ];
 
@@ -284,7 +284,7 @@ describe('QuizService', () => {
         .createQueryBuilder()
         .getRawMany.mockResolvedValue(mockPassed);
 
-      const result = await service.getPassedQuizzesNames('user-id');
+      const result = await service.getPassedQuizzesBadges('user-id');
 
       expect(result).toEqual(mockPassed);
       expect(
@@ -301,7 +301,7 @@ describe('QuizService', () => {
       userQuizProgressRepo
         .createQueryBuilder()
         .getRawMany.mockResolvedValue([]);
-      const result = await service.getPassedQuizzesNames('user-id');
+      const result = await service.getPassedQuizzesBadges('user-id');
       expect(result).toEqual([]);
     });
   });

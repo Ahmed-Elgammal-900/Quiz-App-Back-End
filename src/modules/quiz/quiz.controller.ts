@@ -170,7 +170,7 @@ export class QuizController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getPassedQuizzesNames(@CurrentUser('id') userId: string) {
-    return this.quizService.getPassedQuizzesNames(userId);
+    return this.quizService.getPassedQuizzesBadges(userId);
   }
 
   /**

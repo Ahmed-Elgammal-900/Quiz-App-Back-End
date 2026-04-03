@@ -160,7 +160,7 @@ you will find docs on `http://localhost:3000/docs` (or the port defined in your 
 | GET    | `/activities`                     | Retrieves all active quiz activities for the authenticated user | ✅            |
 | GET    | `/stats`                          | Get the user stats in the platform                              | ✅            |
 | GET    | `/leaderboard`                    | Get leaderboard and ranked users                                | ✅            |
-| GET    | `/passed`                         | Get passed quizzes for the user                                 | ✅            |
+| GET    | `/passed`                         | Get passed quizzes id with badges for the user                  | ✅            |
 | GET    | `/questions/:questionId/answers`  | Get the choices of the question                                 | ✅            |
 | GET    | `/questions/:questionId/answered` | Get user answer for the question                                | ✅            |
 | GET    | `/:quizId/questions`              | Get a questions of the quiz                                     | ✅            |
@@ -381,7 +381,7 @@ class QuizService {
 +getQuizzes()
 +getQuestionsByQuiz()
 +getAnswersByQuestion()
-+getPassedQuizzesNames()
++getPassedQuizzesBadges()
 +getUserQuizAnswer()
 +getQuizProgress()
 +startQuiz()
@@ -510,6 +510,7 @@ erDiagram
     text description
     int timeInSeconds
     string badgeIcon
+    string badgeTitle
   }
   questions {
     uuid id PK
