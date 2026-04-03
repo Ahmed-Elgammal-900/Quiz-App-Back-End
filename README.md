@@ -157,17 +157,17 @@ you will find docs on `http://localhost:3000/docs` (or the port defined in your 
 | Method | Endpoint                          | Description                                                     | Auth Required |
 | ------ | --------------------------------- | --------------------------------------------------------------- | ------------- |
 | GET    | `/`                               | Get all quizzes with user progress if exist                     | ✅            |
-| GET    | `/:quizId/questions`              | Get a questions of the quiz                                     | ✅            |
+| GET    | `/activities`                     | Retrieves all active quiz activities for the authenticated user | ✅            |
+| GET    | `/stats`                          | Get the user stats in the platform                              | ✅            |
+| GET    | `/leaderboard`                    | Get leaderboard and ranked users                                | ✅            |
+| GET    | `/passed`                         | Get passed quizzes for the user                                 | ✅            |
 | GET    | `/questions/:questionId/answers`  | Get the choices of the question                                 | ✅            |
 | GET    | `/questions/:questionId/answered` | Get user answer for the question                                | ✅            |
-| GET    | `/passed`                         | Get passed quizzes for the user                                 | ✅            |
+| GET    | `/:quizId/questions`              | Get a questions of the quiz                                     | ✅            |
 | GET    | `/:quizId/progress`               | Get progress of specific quiz                                   | ✅            |
 | POST   | `/:quizId/start`                  | Begin the quiz                                                  | ✅            |
 | POST   | `/:quizId/pause`                  | Pause the started quiz                                          | ✅            |
 | POST   | `/:quizId/progress`               | Insert user progress                                            | ✅            |
-| GET    | `/activities`                     | Retrieves all active quiz activities for the authenticated user | ✅            |
-| GET    | `/stats`                          | Get the user stats in the platform                              | ✅            |
-| GET    | `/leaderboard`                    | Get leaderboard and ranked users                                | ✅            |
 
 > 📌 All protected routes require an `cookies token` .
 
