@@ -41,6 +41,14 @@ export class UserController {
       properties: {
         name: { type: 'string', example: 'example' },
         email: { type: 'string', example: 'example@email.com' },
+        providers: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['local', 'google'],
+          },
+          example: ['local'],
+        },
       },
     },
   })
@@ -53,7 +61,7 @@ export class UserController {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    return { name: user.name, email: user.email };
+    return { name: user.name, email: user.email, providers: user.providers };
   }
 
   /**

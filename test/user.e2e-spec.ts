@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { MailService } from '../src/modules/mail/mail.service';
 import { UserService } from '../src/modules/user/user.service';
+import { Provider } from '../src/modules/user/constants/provider.constant';
 
 describe('UserController (e2e)', () => {
   let app: INestApplication;
@@ -96,6 +97,7 @@ describe('UserController (e2e)', () => {
       expect(res.body.data).toMatchObject({
         name: TEST_USER.name,
         email: TEST_USER.email,
+        providers: [Provider.LOCAL],
       });
     });
   });
