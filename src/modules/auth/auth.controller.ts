@@ -271,7 +271,8 @@ export class AuthController {
 
   /**
    * Changes the password for the currently authenticated user.
-   * Requires the current password to be correct and the new one to be different.
+   * For local accounts, requires the current password to be correct and the new one to be different.
+   * For OAuth accounts, allows setting a password without current password verification.
    *
    * @route PATCH /auth/change-password
    * @access Protected (jwt-access guard)
@@ -282,7 +283,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Change password',
     description:
-      'Updates password for the authenticated user. Requires current password to be correct.',
+      'Updates password for the authenticated user. For local accounts, requires current password. OAuth accounts can set a password directly.',
   })
   @ApiBody({ type: UpdatePasswordDto })
   @ApiResponse({
@@ -292,7 +293,8 @@ export class AuthController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Current password is incorrect or new password is the same',
+    description:
+      'Current password missing or incorrect (local accounts), or new password matches the existing one',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async changePassword(

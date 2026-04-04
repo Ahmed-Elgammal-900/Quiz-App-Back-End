@@ -259,6 +259,18 @@ describe('AuthController (e2e)', () => {
   });
 
   describe('PATCH /auth/change-password', () => {
+    it('should fail without auth', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/auth/change-password')
+        .send({
+          currentPassword: TEST_USER.password,
+          newPassword: 'NewPass123!@#',
+          confirmPassword: 'NewPass123!@#',
+        });
+
+      expect(res.status).toBe(401);
+    });
+
     it('should fail with wrong current password', async () => {
       const res = await request(app.getHttpServer())
         .patch('/auth/change-password')
@@ -266,6 +278,7 @@ describe('AuthController (e2e)', () => {
         .send({
           currentPassword: 'wrongpassword',
           newPassword: 'NewPass123!',
+          confirmPassword: 'NewPass123!',
         });
 
       expect(res.status).toBe(400);
@@ -278,6 +291,7 @@ describe('AuthController (e2e)', () => {
         .send({
           currentPassword: TEST_USER.password,
           newPassword: TEST_USER.password,
+          confirmPassword: TEST_USER.password,
         });
 
       expect(res.status).toBe(400);
@@ -298,17 +312,6 @@ describe('AuthController (e2e)', () => {
         'message',
         'password changed successfully',
       );
-    });
-
-    it('should fail without auth', async () => {
-      const res = await request(app.getHttpServer())
-        .patch('/auth/change-password')
-        .send({
-          currentPassword: TEST_USER.password,
-          newPassword: 'NewPass123!@#',
-        });
-
-      expect(res.status).toBe(401);
     });
   });
 

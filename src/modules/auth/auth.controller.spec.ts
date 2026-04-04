@@ -3,6 +3,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 const mockResponse = () => {
   const res: Partial<Response> = {
@@ -132,14 +133,64 @@ describe('AuthController', () => {
 
       const result = await controller.changePassword(
         { id: 'user-123' } as any,
-        { currentPassword: 'old', newPassword: 'new' } as any,
+        {
+          currentPassword: 'old',
+          newPassword: 'new',
+          confirmPassword: 'new',
+        } as any,
       );
 
       expect(result).toEqual({ message: 'password changed successfully' });
       expect(mockAuthService.changePassword).toHaveBeenCalledWith('user-123', {
         currentPassword: 'old',
         newPassword: 'new',
+        confirmPassword: 'new',
       });
+    });
+
+    it('should change password without currentPassword (OAuth account)', async () => {
+      mockAuthService.changePassword.mockResolvedValue(undefined);
+
+      const result = await controller.changePassword(
+        { id: 'user-123' } as any,
+        { newPassword: 'new', confirmPassword: 'new' } as any,
+      );
+
+      expect(result).toEqual({ message: 'password changed successfully' });
+    });
+
+    it('should throw if authService throws BadRequestException', async () => {
+      mockAuthService.changePassword.mockRejectedValue(
+        new BadRequestException('Current password is incorrect'),
+      );
+
+      await expect(
+        controller.changePassword(
+          { id: 'user-123' } as any,
+          {
+            currentPassword: 'wrong',
+            newPassword: 'new',
+            confirmPassword: 'new',
+          } as any,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw if authService throws NotFoundException', async () => {
+      mockAuthService.changePassword.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
+
+      await expect(
+        controller.changePassword(
+          { id: 'user-123' } as any,
+          {
+            currentPassword: 'old',
+            newPassword: 'new',
+            confirmPassword: 'new',
+          } as any,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

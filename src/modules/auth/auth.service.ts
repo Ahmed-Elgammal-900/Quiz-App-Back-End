@@ -24,6 +24,7 @@ import {
 } from './constants/auth.constants';
 import { TokenType } from './constants/token-type.constant';
 import { UserResponse } from './types/response-types';
+import { Provider } from '../user/constants/provider.constant';
 
 @Injectable()
 export class AuthService {
@@ -160,29 +161,36 @@ export class AuthService {
 
   /**
    * Changes the password for an authenticated user.
-   * Validates the current password and ensures the new one is different.
+   * For local accounts, validates the current password and ensures the new one is different.
+   * For OAuth accounts, allows setting/changing password without current password verification.
    *
    * @param id - The ID of the user changing their password
-   * @param updatePasswordDto - Contains currentPassword and newPassword
+   * @param updatePasswordDto - Contains optional currentPassword, newPassword, and confirmPassword
    * @throws {NotFoundException} If the user is not found
-   * @throws {BadRequestException} If current password is wrong or new password matches the old one
+   * @throws {BadRequestException} If current password is missing or incorrect (local accounts only),
+   * or if the new password matches the existing one
    */
   async changePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
     const user = await this.userService.findOne({ id });
     if (!user) throw new NotFoundException('User not found');
+    if (user.providers.length === 1 && user.providers[0] === Provider.LOCAL) {
+      if (!updatePasswordDto.currentPassword) {
+        throw new BadRequestException('current password required');
+      }
+      const isMatch = await bcrypt.compare(
+        updatePasswordDto.currentPassword,
+        user.password,
+      );
+      if (!isMatch)
+        throw new BadRequestException('Current password is incorrect');
 
-    const isMatch = await bcrypt.compare(
-      updatePasswordDto.currentPassword,
-      user.password,
-    );
-    if (!isMatch)
-      throw new BadRequestException('Current password is incorrect');
-
-    const isSame = await bcrypt.compare(
-      updatePasswordDto.newPassword,
-      user.password,
-    );
-    if (isSame) throw new BadRequestException('New password must be different');
+      const isSame = await bcrypt.compare(
+        updatePasswordDto.newPassword,
+        user.password,
+      );
+      if (isSame)
+        throw new BadRequestException('New password must be different');
+    }
 
     const hashedPassword = await bcrypt.hash(
       updatePasswordDto.newPassword,

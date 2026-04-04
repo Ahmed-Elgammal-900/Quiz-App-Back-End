@@ -23,7 +23,7 @@ export class User {
 
   @Column({
     type: 'simple-array',
-    default: [Provider.LOCAL],
+    default: Provider.LOCAL,
   })
   providers!: Provider[];
 

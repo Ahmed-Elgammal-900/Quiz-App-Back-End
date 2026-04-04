@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { TokenType } from './constants/token-type.constant';
+import { Provider } from '../user/constants/provider.constant';
 
 jest.mock('bcrypt');
 
@@ -482,14 +483,15 @@ describe('AuthService', () => {
   // changePassword
 
   describe('changePassword', () => {
-    it('should change password successfully', async () => {
+    it('should change password successfully for LOCAL provider', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         password: 'hashed',
+        providers: [Provider.LOCAL],
       });
       (bcrypt.compare as jest.Mock)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(false);
+        .mockResolvedValueOnce(true) // currentPassword matches
+        .mockResolvedValueOnce(false); // newPassword is different
       (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
 
       await service.changePassword('user-123', {
@@ -508,16 +510,34 @@ describe('AuthService', () => {
 
       await expect(
         service.changePassword('user-123', {
-          currentPassword: 'old',
           newPassword: 'new',
           confirmPassword: 'new',
         }),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw if current password is wrong', async () => {
-      mockUserService.findOne.mockResolvedValue({ password: 'hashed' });
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+    it('should throw if currentPassword is missing for LOCAL provider', async () => {
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        password: 'hashed',
+        providers: [Provider.LOCAL],
+      });
+
+      await expect(
+        service.changePassword('user-123', {
+          newPassword: 'new',
+          confirmPassword: 'new',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw if current password is wrong for LOCAL provider', async () => {
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        password: 'hashed',
+        providers: [Provider.LOCAL],
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
 
       await expect(
         service.changePassword('user-123', {
@@ -528,8 +548,12 @@ describe('AuthService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw if new password is same as old', async () => {
-      mockUserService.findOne.mockResolvedValue({ password: 'hashed' });
+    it('should throw if new password is same as old for LOCAL provider', async () => {
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        password: 'hashed',
+        providers: [Provider.LOCAL],
+      });
       (bcrypt.compare as jest.Mock)
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(true);
@@ -541,6 +565,42 @@ describe('AuthService', () => {
           confirmPassword: 'same',
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should change password without currentPassword for OAuth provider', async () => {
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        password: null,
+        providers: [Provider.GOOGLE],
+      });
+      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
+
+      await service.changePassword('user-123', {
+        newPassword: 'new',
+        confirmPassword: 'new',
+      });
+
+      expect(mockUserService.updateUser).toHaveBeenCalledWith('user-123', {
+        password: 'new-hashed',
+      });
+    });
+
+    it('should change password without currentPassword for mixed providers (LOCAL + GOOGLE)', async () => {
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        password: 'hashed',
+        providers: [Provider.LOCAL, Provider.GOOGLE],
+      });
+      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
+
+      await service.changePassword('user-123', {
+        newPassword: 'new',
+        confirmPassword: 'new',
+      });
+
+      expect(mockUserService.updateUser).toHaveBeenCalledWith('user-123', {
+        password: 'new-hashed',
+      });
     });
   });
 
