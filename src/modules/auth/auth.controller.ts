@@ -35,6 +35,7 @@ import {
   REFRESH_TOKEN_MAX_AGE,
 } from './constants/auth.constants';
 import { ExchangeQueryDto } from './dto/exchange-query.dto';
+import { clearTokenCookies } from '../../utils/clear-cookie';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -499,7 +500,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.logout(user.id);
-    this.clearTokenCookies(res);
+    clearTokenCookies(res, this.configService);
 
     return { message: 'logout success' };
   }
@@ -532,22 +533,5 @@ export class AuthController {
       maxAge: REFRESH_TOKEN_MAX_AGE,
       path: '/',
     });
-  }
-
-  /**
-   * Clears access and refresh token cookies from the browser.
-   *
-   * @param res - The Express response object
-   */
-  private clearTokenCookies(res: Response) {
-    const cookieOptions = {
-      httpOnly: true,
-      secure: this.configService.get('NODE_ENV') === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-    };
-
-    res.clearCookie('access_token', cookieOptions);
-    res.clearCookie('refresh_token', cookieOptions);
   }
 }

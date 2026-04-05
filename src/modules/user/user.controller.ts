@@ -16,6 +16,7 @@ import { UserService } from './user.service';
 import { Response } from 'express';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { UserResponse } from '../auth/types/response-types';
+import { clearTokenCookies } from '../../utils/clear-cookie';
 
 @ApiTags('User')
 @ApiCookieAuth('access_token')
@@ -89,25 +90,8 @@ export class UserController {
   ) {
     const message = await this.userService.deleteUser(user);
 
-    this.clearTokenCookies(res);
+    clearTokenCookies(res, this.configService);
 
     return message;
-  }
-
-  /**
-   * Clear cookies with options
-   * @param res server response
-   * @returns void
-   */
-  private clearTokenCookies(res: Response) {
-    const cookieOptions = {
-      httpOnly: true,
-      secure: this.configService.get('NODE_ENV') === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-    };
-
-    res.clearCookie('access_token', cookieOptions);
-    res.clearCookie('refresh_token', cookieOptions);
   }
 }
