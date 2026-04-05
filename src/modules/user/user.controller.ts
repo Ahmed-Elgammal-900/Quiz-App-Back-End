@@ -103,7 +103,7 @@ export class UserController {
     const cookieOptions = {
       httpOnly: true,
       secure: this.configService.get('NODE_ENV') === 'production',
-      sameSite: 'strict' as const,
+      sameSite: 'lax' as const,
       path: '/',
     };
 
