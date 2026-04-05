@@ -98,7 +98,7 @@ describe('UserController', () => {
       expect(res.clearCookie).toHaveBeenCalledWith('access_token', {
         httpOnly: true,
         secure: false,
-        sameSite: 'strict',
+        sameSite: 'lax',
         path: '/',
       });
     });
@@ -113,7 +113,7 @@ describe('UserController', () => {
       expect(res.clearCookie).toHaveBeenCalledWith('access_token', {
         httpOnly: true,
         secure: true,
-        sameSite: 'strict',
+        sameSite: 'lax',
         path: '/',
       });
     });
