@@ -9,6 +9,7 @@ const mockUser = {
   id: 'user-123',
   name: 'Test User',
   email: 'test-user@example.com',
+  providers: ['local'],
 } as any;
 
 const mockResponse = (): Response =>
@@ -45,7 +46,12 @@ describe('UserController', () => {
 
       const result = await controller.getUser(mockUser.id);
 
-      expect(result).toEqual({ name: mockUser.name, email: mockUser.email });
+      expect(result).toEqual({
+        id: mockUser.id,
+        name: mockUser.name,
+        email: mockUser.email,
+        providers: mockUser.providers,
+      });
       expect(mockUserService.findOne).toHaveBeenCalledWith({ id: mockUser.id });
     });
 

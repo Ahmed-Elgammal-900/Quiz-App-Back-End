@@ -9,7 +9,7 @@
 ![Jest](https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 ![Version](https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge)
-![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
 > A scalable, production-ready REST API for the Quizzer platform, featuring secure JWT-based authentication, comprehensive quiz management, and a dynamic leaderboard system that enables users to evaluate their performance and engage in competitive gameplay
 
@@ -237,6 +237,8 @@ src
 │   │   │   ├── quiz.entity.ts
 │   │   │   ├── user-progress.entity.ts
 │   │   │   └── user-quiz-answer.entity.ts
+│   │   ├── types
+│   │   │   └── quiz.types.ts
 │   │   ├── quiz.controller.spec.ts
 │   │   ├── quiz.controller.ts
 │   │   ├── quiz.module.ts
@@ -256,6 +258,8 @@ src
 │       ├── user.module.ts
 │       ├── user.service.spec.ts
 │       └── user.service.ts
+├── utils
+│   └── clear-cookie.ts
 ├── app.controller.ts
 ├── app.module.ts
 └── main.ts
@@ -560,17 +564,9 @@ erDiagram
 
 ---
 
-## License
+## 📄 License
 
-Copyright (c) 2026 Ahmed Elgammal. All Rights Reserved.
-
-No part of this software and its source code may be reproduced, distributed,
-or transmitted in any form or by any means, including photocopying, recording,
-or other electronic or mechanical methods, without the prior written permission
-of the author, except in the case of brief quotations embodied in critical
-reviews and certain other noncommercial uses permitted by copyright law.
-
-For permission requests, contact: elgmmal228@gmail.com
+MIT License
 
 ---
 

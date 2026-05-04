@@ -6,6 +6,8 @@ import {
   Query,
   Param,
   ParseUUIDPipe,
+  ParseIntPipe,
+  Delete,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +19,7 @@ import {
   ApiOkResponse,
   ApiUnauthorizedResponse,
   ApiBody,
+  ApiNoContentResponse,
 } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
@@ -31,39 +34,25 @@ import { QuizProgressStatus } from './constants/quiz-progress-status';
 export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
-  /**
-   * Retrieves all quizzes with their progress status for a specific user.
-   * @route GET /quizzes
-   */
+  /** Returns all quizzes with their progress status for the authenticated user. */
   @Get()
   @ApiOperation({
     summary: 'Get all quizzes',
     description:
       'Retrieves all quizzes with their progress status for the authenticated user.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'List of quizzes with progress status',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOkResponse({ description: 'List of quizzes with progress status' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   getQuizzes(@CurrentUser('id') userId: string) {
     return this.quizService.getQuizzes(userId);
   }
 
-  /**
-   * Retrieves all active quiz activities for the authenticated user.
-   *
-   * Returns quizzes that are currently in progress or paused,
-   * sorted by the most recent attempt first.
-   *
-   * @param user - The authenticated user extracted from the JWT token
-   * @returns A list of active quiz progress records with quiz title
-   */
+  /** Returns quizzes currently in progress or paused, sorted by most recent attempt. */
   @Get('activities')
   @ApiOperation({
     summary: 'Get user quiz activities',
     description:
-      'Returns all quizzes that are currently in progress or paused for the authenticated user, sorted by most recent attempt.',
+      'Returns all quizzes that are currently in progress or paused, sorted by most recent attempt.',
   })
   @ApiOkResponse({
     description: 'Active quiz activities retrieved successfully',
@@ -83,9 +72,7 @@ export class QuizController {
           attemptAt: { type: 'string', format: 'date-time', nullable: true },
           quiz: {
             type: 'object',
-            properties: {
-              title: { type: 'string' },
-            },
+            properties: { title: { type: 'string' } },
           },
         },
       },
@@ -96,19 +83,36 @@ export class QuizController {
     return this.quizService.getActivities(id);
   }
 
-  /**
-   * Retrieves statistics for a specific user including
-   * total quizzes, passed quizzes, average score, and total score.
-   * @route GET /quizzes/stats
-   */
+  /** Returns the authenticated user's final result for a completed quiz. */
+  @Get(':quizId/get-result')
+  @ApiOperation({
+    summary: 'Get quiz result',
+    description:
+      "Retrieves the authenticated user's result for a specific quiz.",
+  })
+  @ApiParam({
+    name: 'quizId',
+    description: 'UUID of the quiz',
+    example: 'a3bb189e-8bf9-3888-9912-ace4e6543002',
+  })
+  @ApiOkResponse({ description: 'Quiz result for the user' })
+  @ApiResponse({ status: 400, description: 'Invalid UUID' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  getResult(
+    @CurrentUser('id') userId: string,
+    @Param('quizId', ParseUUIDPipe) quizId: string,
+  ) {
+    return this.quizService.getResult(userId, quizId);
+  }
+
+  /** Returns aggregate stats for the authenticated user: total quizzes, passed, average score, and total score. */
   @Get('stats')
   @ApiOperation({
     summary: 'Get user statistics',
     description:
-      'Retrieves statistics for the authenticated user including total quizzes, passed quizzes, average score, and total score.',
+      'Retrieves total quizzes, passed quizzes, average score, and total score for the authenticated user.',
   })
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
     description: 'User statistics',
     schema: {
       example: {
@@ -119,21 +123,88 @@ export class QuizController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   getUserStats(@CurrentUser('id') userId: string) {
     return this.quizService.getUserStats(userId);
   }
 
-  /**
-   * Retrieves the leaderboard of users ordered by
-   * passed quizzes count and average score.
-   * @route GET /quizzes/leaderboard
-   */
+  /** Returns the top 3 users on the leaderboard ranked by passed quizzes, total score, and average score. */
+  @Get('top-three')
+  @ApiOperation({
+    summary: 'Get top 3 leaderboard users',
+    description:
+      'Returns top 3 users ranked by passed quizzes, total score, and average score.',
+  })
+  @ApiOkResponse({
+    description: 'Top 3 users retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string', example: 'uuid' },
+          name: { type: 'string', example: 'Ahmed' },
+          totalScore: { type: 'number', example: 950 },
+        },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  getTopThree() {
+    return this.quizService.getTopThree();
+  }
+
+  /** Returns the authenticated user's current leaderboard rank and stats. */
+  @Get('my-rank')
+  @ApiOperation({
+    summary: 'Get current user rank',
+    description:
+      "Returns the authenticated user's rank and stats on the leaderboard.",
+  })
+  @ApiOkResponse({
+    description: 'User rank retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        rank: { type: 'number', example: 42 },
+        name: { type: 'string', example: 'Ahmed' },
+        totalScore: { type: 'number', example: 450 },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  getUserRank(@CurrentUser('id') userId: string) {
+    return this.quizService.getUserRank(userId);
+  }
+
+  /** Deletes all submitted answers for the authenticated user on a specific quiz. */
+  @Delete(':quizId/delete-user-answers')
+  @ApiOperation({
+    summary: 'Delete user answers for a quiz',
+    description:
+      "Deletes all of the authenticated user's submitted answers for a specific quiz.",
+  })
+  @ApiParam({
+    name: 'quizId',
+    description: 'UUID of the quiz',
+    example: 'a3bb189e-8bf9-3888-9912-ace4e6543002',
+  })
+  @ApiNoContentResponse({ description: 'Answers deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid UUID' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  deleteUserAnswers(
+    @CurrentUser('id') userId: string,
+    @Param('quizId', ParseUUIDPipe) quizId: string,
+  ) {
+    return this.quizService.deleteUserAnswers(userId, quizId);
+  }
+
+  /** Returns a paginated leaderboard ordered by passed quizzes, total score, and average score. */
   @Get('leaderboard')
   @ApiOperation({
     summary: 'Get leaderboard',
     description:
-      'Retrieves the leaderboard of users ordered by passed quizzes count and average score.',
+      'Retrieves paginated leaderboard ordered by passed quizzes count, total score, and average score.',
   })
   @ApiQuery({
     name: 'page',
@@ -147,82 +218,26 @@ export class QuizController {
     description: 'Number of items per page',
     example: 10,
   })
-  @ApiResponse({ status: 200, description: 'Paginated leaderboard' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOkResponse({ description: 'Paginated leaderboard' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   getLeaderboard(@Query() { page, limit }: PaginationDto) {
     return this.quizService.getLeaderboard(page, limit);
   }
 
-  /**
-   * Retrieves the names and IDs of all quizzes a user has passed.
-   * @route GET /quizzes/passed
-   */
-
-  @Get('passed')
+  /** Returns the names and IDs of all quizzes the authenticated user has passed. */
+  @Get('earned-badges')
   @ApiOperation({
-    summary: 'Get passed quizzes',
+    summary: 'Get earned badges',
     description:
       'Retrieves the names and IDs of all quizzes the authenticated user has passed.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'List of passed quiz names and IDs',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getPassedQuizzesNames(@CurrentUser('id') userId: string) {
+  @ApiOkResponse({ description: 'List of earned badges' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  getPassedQuizzesBadges(@CurrentUser('id') userId: string) {
     return this.quizService.getPassedQuizzesBadges(userId);
   }
 
-  /**
-   * Retrieves all answers for a specific question.
-   * @route GET /quizzes/questions/:questionId/answers
-   */
-  @Get('questions/:questionId/answers')
-  @ApiOperation({
-    summary: 'Get answers for a question',
-    description: 'Retrieves all answers for a specific question.',
-  })
-  @ApiParam({
-    name: 'questionId',
-    description: 'UUID of the question',
-    example: 'a3bb189e-8bf9-3888-9912-ace4e6543002',
-  })
-  @ApiResponse({ status: 200, description: 'List of answers for the question' })
-  @ApiResponse({ status: 400, description: 'Invalid UUID' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getAnswersByQuestion(@Param('questionId', ParseUUIDPipe) questionId: string) {
-    return this.quizService.getAnswersByQuestion(questionId);
-  }
-
-  /**
-   * Retrieves a user's answer for a specific question.
-   * @route GET /quizzes/questions/:questionId/answered
-   */
-  @Get('questions/:questionId/answered')
-  @ApiOperation({
-    summary: "Get user's answer for a question",
-    description:
-      "Retrieves the authenticated user's selected answer for a specific question.",
-  })
-  @ApiParam({
-    name: 'questionId',
-    description: 'UUID of the question',
-    example: 'a3bb189e-8bf9-3888-9912-ace4e6543002',
-  })
-  @ApiResponse({ status: 200, description: "User's answer for the question" })
-  @ApiResponse({ status: 400, description: 'Invalid UUID' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getUserQuizAnswer(
-    @CurrentUser('id') userId: string,
-    @Param('questionId', ParseUUIDPipe) questionId: string,
-  ) {
-    return this.quizService.getUserQuizAnswer(userId, questionId);
-  }
-
-  /**
-   * Retrieves paginated questions for a specific quiz including their answers.
-   * @route GET /quizzes/:quizId/questions
-   */
+  /** Returns paginated questions with their answers for a specific quiz. */
   @Get(':quizId/questions')
   @ApiOperation({
     summary: 'Get paginated questions for a quiz',
@@ -246,23 +261,36 @@ export class QuizController {
     description: 'Number of items per page',
     example: 10,
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Paginated list of questions with answers',
-  })
+  @ApiOkResponse({ description: 'Paginated list of questions with answers' })
   @ApiResponse({ status: 400, description: 'Invalid UUID' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   getQuestionsByQuiz(
     @Param('quizId', ParseUUIDPipe) quizId: string,
     @Query() { page, limit }: PaginationDto,
   ) {
-    return this.quizService.getQuestionsByQuiz(quizId, page, limit);
+    return this.quizService.getQuizWithQuestions(quizId, page, limit);
   }
 
-  /**
-   * Retrieves a user's progress for a specific quiz.
-   * @route GET /quizzes/:quizId/progress
-   */
+  /** Returns only the IDs of all questions belonging to a specific quiz. */
+  @Get(':quizId/questions/ids')
+  @ApiOperation({
+    summary: 'Get question IDs for a quiz',
+    description:
+      'Retrieves only the IDs of all questions belonging to a specific quiz.',
+  })
+  @ApiParam({
+    name: 'quizId',
+    description: 'UUID of the quiz',
+    example: 'a3bb189e-8bf9-3888-9912-ace4e6543002',
+  })
+  @ApiOkResponse({ description: 'List of question UUIDs' })
+  @ApiResponse({ status: 400, description: 'Invalid UUID' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  getQuestionsIds(@Param('quizId', ParseUUIDPipe) quizId: string) {
+    return this.quizService.getQuestionsIds(quizId);
+  }
+
+  /** Returns the authenticated user's progress records for a specific quiz. */
   @Get(':quizId/progress')
   @ApiOperation({
     summary: "Get user's quiz progress",
@@ -274,21 +302,26 @@ export class QuizController {
     description: 'UUID of the quiz',
     example: 'a3bb189e-8bf9-3888-9912-ace4e6543002',
   })
-  @ApiResponse({ status: 200, description: 'Quiz progress for the user' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Max number of progress records to return',
+  })
+  @ApiOkResponse({ description: 'Quiz progress for the user' })
   @ApiResponse({ status: 400, description: 'Invalid UUID' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   getQuizProgress(
     @CurrentUser('id') userId: string,
     @Param('quizId', ParseUUIDPipe) quizId: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
   ) {
-    return this.quizService.getQuizProgress(userId, quizId);
+    return this.quizService.getQuizUserProgress(userId, quizId, limit);
   }
 
   /**
-   * Starts or restarts a quiz session for a user.
-   * - If user already passed, only updates attemptAt without resetting progress
-   * - If user has not passed, resets all progress fields and records attempt time
-   * @route POST /quizzes/:quizId/start
+   * If the user already passed this quiz, only `attemptAt` is updated —
+   * score and answers are preserved. Otherwise all progress is reset
+   * and a fresh attempt is recorded.
    */
   @Post(':quizId/start')
   @ApiOperation({
@@ -307,7 +340,7 @@ export class QuizController {
     schema: { example: { message: 'Quiz started successfully' } },
   })
   @ApiResponse({ status: 400, description: 'Invalid UUID' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async startQuiz(
     @CurrentUser('id') userId: string,
     @Param('quizId', ParseUUIDPipe) quizId: string,
@@ -317,16 +350,15 @@ export class QuizController {
   }
 
   /**
-   * Saves a user's answer for a question and updates their quiz progress.
-   * Calculates score, marks quiz as completed if last question,
-   * and deletes answers if user passed.
-   * @route POST /quizzes/:quizId/progress
+   * Saves the user's answer for a question and updates their quiz progress.
+   * Marks the quiz as completed if this is the last question.
+   * Clears all stored answers if the user passed.
    */
   @Post(':quizId/progress')
   @ApiOperation({
     summary: 'Save answer and update progress',
     description:
-      "Saves the user's answer for a question, updates score, marks quiz as completed if last question, and deletes answers if user passed.",
+      "Saves the user's answer for a question, updates score, marks quiz as completed if last question, and clears answers if the user passed.",
   })
   @ApiParam({
     name: 'quizId',
@@ -336,7 +368,7 @@ export class QuizController {
   @ApiBody({ type: InsertProgressDto })
   @ApiResponse({ status: 201, description: 'Progress updated successfully' })
   @ApiResponse({ status: 400, description: 'Invalid UUID or body' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   insertUserProgress(
     @CurrentUser('id') userId: string,
     @Param('quizId', ParseUUIDPipe) quizId: string,
@@ -350,15 +382,12 @@ export class QuizController {
     );
   }
 
-  /**
-   * Pauses a quiz session saving the current question and remaining time.
-   * @route POST /quizzes/:quizId/pause
-   */
+  /** Pauses the quiz session, saving the current question index and remaining time. */
   @Post(':quizId/pause')
   @ApiOperation({
     summary: 'Pause a quiz session',
     description:
-      'Pauses the quiz session saving the current question and remaining time.',
+      'Pauses the quiz session, saving the current question index and remaining time.',
   })
   @ApiParam({
     name: 'quizId',
@@ -372,7 +401,7 @@ export class QuizController {
     schema: { example: { message: 'Quiz paused successfully' } },
   })
   @ApiResponse({ status: 400, description: 'Invalid UUID or body' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async pauseQuiz(
     @CurrentUser('id') userId: string,
     @Param('quizId', ParseUUIDPipe) quizId: string,
@@ -381,7 +410,7 @@ export class QuizController {
     await this.quizService.pauseQuiz(
       userId,
       quizId,
-      body.pausedAtQuestionId,
+      body.pausedAtQuestionIndex,
       body.remainingTimeSeconds,
     );
     return { message: 'Quiz paused successfully' };

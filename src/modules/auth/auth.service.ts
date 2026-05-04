@@ -136,6 +136,9 @@ export class AuthService {
       throw new BadRequestException('Reset token has expired');
     }
 
+    const user = await this.userService.findOne({ id: resetToken.userId });
+    if (!user) throw new NotFoundException('User not found');
+
     const hashedPassword = await bcrypt.hash(newPassword, HASH_SALT_ROUNDS);
     await this.userService.updateUser(resetToken.userId, {
       password: hashedPassword,
@@ -146,10 +149,11 @@ export class AuthService {
       resetToken.userId,
     );
 
-    const user = await this.userService.findOne({ id: resetToken.userId });
-
-    if (!user) {
-      throw new NotFoundException('user not found');
+    if (!user.providers.includes(Provider.LOCAL)) {
+      user.providers = [...user.providers, Provider.LOCAL];
+      await this.userService.updateUser(user.id, {
+        providers: [...user.providers, Provider.LOCAL],
+      });
     }
 
     if (!user.isEmailVerified) {

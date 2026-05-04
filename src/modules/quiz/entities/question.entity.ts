@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Quiz } from './quiz.entity';
 import { Answer } from './answer.entity';
+import { UserQuizAnswer } from './user-quiz-answer.entity';
 
 @Entity('questions')
 @Index(['quizId'])
@@ -37,4 +38,7 @@ export class Question {
     eager: false,
   })
   answers!: Answer[];
+
+  @OneToMany(() => UserQuizAnswer, (userAnswer) => userAnswer.question)
+  userQuizAnswers!: UserQuizAnswer[];
 }

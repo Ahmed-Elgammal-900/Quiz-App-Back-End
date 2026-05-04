@@ -16,9 +16,6 @@ export class Quiz {
   timeInSeconds!: number;
 
   @Column({ type: 'varchar', nullable: true })
-  badgeIcon!: string | null;
-
-  @Column({ type: 'varchar', nullable: true })
   badgeTitle!: string | null;
 
   @OneToMany(() => Question, (question) => question.quiz, {

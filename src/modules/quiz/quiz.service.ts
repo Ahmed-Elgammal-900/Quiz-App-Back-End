@@ -9,117 +9,289 @@ import { QuizProgressStatus } from './constants/quiz-progress-status';
 import { UserQuizAnswer } from './entities/user-quiz-answer.entity';
 import { User } from '../user/entities/user.entity';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import type { LeaderboardEntry, UserRank } from './types/quiz.types';
 
 @Injectable()
 export class QuizService {
   constructor(
-    @InjectRepository(Quiz) private readonly quizRepo: Repository<Quiz>,
+    @InjectRepository(Quiz)
+    private readonly quizRepo: Repository<Quiz>,
     @InjectRepository(Question)
     private readonly questionRepo: Repository<Question>,
-    @InjectRepository(Answer) private readonly answerRepo: Repository<Answer>,
+    @InjectRepository(Answer)
+    private readonly answerRepo: Repository<Answer>,
     @InjectRepository(UserQuizProgress)
     private readonly userQuizProgressRepo: Repository<UserQuizProgress>,
     @InjectRepository(UserQuizAnswer)
     private readonly userQuizAnswerRepo: Repository<UserQuizAnswer>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
-  /**
-   * Retrieves all quizzes with their progress status for a specific user.
-   * @param userId - The ID of the user
-   * @returns Object containing quizInfo (all quizzes) and quizzesStatus (user progress per quiz)
-   */
 
+  /**
+   * Retrieves all quizzes with their progress status for the authenticated user.
+   * Merges quiz info with user progress, falling back to null for fields with no progress yet.
+   * @param userId - The UUID of the user
+   * @returns List of quizzes with score, status, passed, progress, and effective timeInSeconds
+   */
   async getQuizzes(userId: string) {
-    const info = await this.quizRepo.find({
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        timeInSeconds: true,
-      },
-    });
+    const info = await this.quizRepo
+      .createQueryBuilder('quiz')
+      .select([
+        'quiz.id',
+        'quiz.title',
+        'quiz.description',
+        'quiz.timeInSeconds',
+      ])
+      .loadRelationCountAndMap('quiz.questionsCount', 'quiz.questions')
+      .getMany();
 
     const progress = await this.userQuizProgressRepo.find({
       where: { userId },
-      select: ['quizId', 'score', 'status', 'passed'],
+      select: [
+        'quizId',
+        'score',
+        'progress',
+        'status',
+        'passed',
+        'remainingTimeSeconds',
+      ],
     });
 
-    const quizzesStatus = progress.map((p) => ({
-      quizId: p.quizId,
-      score: p.score,
-      status: p.status,
-      passed: p.passed,
-    }));
+    const quizzes = info.map((quiz) => {
+      const { timeInSeconds, ...quizWithoutTime } = quiz;
+      const quizProgress = progress.find((p) => p.quizId === quiz.id) ?? null;
+      return {
+        ...quizWithoutTime,
+        timeInSeconds: quizProgress?.remainingTimeSeconds || timeInSeconds,
+        score: quizProgress?.score ?? null,
+        status: quizProgress?.status ?? null,
+        passed: quizProgress?.passed ?? null,
+        progress: quizProgress?.progress ?? null,
+      };
+    });
 
-    return { quizInfo: info, quizzesStatus };
+    return quizzes;
   }
 
   /**
-   * Retrieves paginated questions for a specific quiz, including their answers.
-   * @param quizId - The ID of the quiz
+   * Retrieves paginated questions with their answers for a specific quiz.
+   * Strips isCorrect and orderIndex from answers before returning.
+   * @param quizId - The UUID of the quiz
    * @param page - Page number (default: 1)
    * @param limit - Number of questions per page (default: 10)
-   * @returns Paginated list of questions with answers ordered by orderIndex
+   * @returns Quiz title, sanitized questions with answers, and pagination metadata
    */
-  async getQuestionsByQuiz(
+  async getQuizWithQuestions(
     quizId: string,
     page: number = 1,
     limit: number = 10,
   ) {
-    if (page < 1 || limit < 1) {
-      throw new BadRequestException('page and limit must be >= 1');
-    }
-    const skip = (page - 1) * limit;
+    const quizTitle = await this.quizRepo.find({
+      select: { title: true },
+      where: { id: quizId },
+    });
 
-    const [questions, total] = await this.questionRepo
+    if (!quizTitle[0].title) return null;
+
+    const targetPage = page;
+    const skip = (targetPage - 1) * limit;
+
+    const questionIds = await this.questionRepo
       .createQueryBuilder('question')
+      .select('question.id')
       .where('question.quizId = :quizId', { quizId })
       .orderBy('question.orderIndex', 'ASC')
       .skip(skip)
       .take(limit)
-      .getManyAndCount();
+      .getMany();
+
+    const ids = questionIds.map((q) => q.id);
+
+    const total = await this.questionRepo
+      .createQueryBuilder('question')
+      .where('question.quizId = :quizId', { quizId })
+      .getCount();
+
+    const questions = await this.questionRepo
+      .createQueryBuilder('question')
+      .leftJoinAndSelect('question.answers', 'answer')
+      .where('question.id IN (:...ids)', { ids })
+      .orderBy('question.orderIndex', 'ASC')
+      .addOrderBy('answer.orderIndex', 'ASC')
+      .getMany();
+
+    const safeQuestions = questions.map(({ answers, orderIndex, ...q }) => {
+      return {
+        ...q,
+        answers: answers.map(({ isCorrect, orderIndex, ...a }) => a),
+      };
+    });
 
     return {
-      data: questions,
-      meta: {
+      quizTitle: quizTitle[0].title,
+      questions: safeQuestions,
+      pagination: {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
       },
     };
   }
 
   /**
-   * Retrieves all answers for a specific question ordered by orderIndex.
-   * @param questionId - The ID of the question
-   * @returns List of answers for the question
+   * Retrieves the final result of a completed quiz attempt for a user.
+   * @param userId - The UUID of the user
+   * @param quizId - The UUID of the quiz
+   * @returns Quiz title, score, status, passed flag, correct answers count, total questions, and time taken
+   * @throws NotFoundException if progress or quiz is not found
    */
-  async getAnswersByQuestion(questionId: string) {
-    return this.answerRepo
-      .createQueryBuilder('answer')
-      .select(['answer.id', 'answer.text', 'answer.orderIndex'])
-      .where('answer.questionId = :questionId', { questionId })
-      .orderBy('answer.orderIndex', 'ASC')
-      .getMany();
+  async getResult(userId: string, quizId: string) {
+    const progress = await this.userQuizProgressRepo.findOne({
+      where: { userId, quizId },
+    });
+    if (!progress) throw new NotFoundException('progress not found');
+    const correctAnswers = await this.userQuizAnswerRepo.count({
+      where: { userId, quizId, isCorrect: true },
+    });
+    const totalQuestions = await this.questionRepo.count({ where: { quizId } });
+    const quiz = await this.quizRepo.findOne({
+      where: { id: quizId },
+      select: { title: true, timeInSeconds: true },
+    });
+    if (!quiz) throw new NotFoundException('quiz not found');
+    return {
+      quizTitle: quiz.title,
+      score: progress.score,
+      status: progress.status,
+      passed: progress.passed,
+      correctAnswers,
+      totalQuestions,
+      timeTaken:
+        progress.remainingTimeSeconds === 0
+          ? quiz.timeInSeconds
+          : quiz.timeInSeconds - progress.remainingTimeSeconds,
+    };
   }
 
   /**
-   * Retrieves the names and IDs of all quizzes a user has passed.
-   *
+   * Retrieves only the ordered IDs of all questions belonging to a quiz.
+   * @param quizId - The UUID of the quiz
+   * @returns Array of question UUIDs sorted by orderIndex ascending
+   */
+  async getQuestionsIds(quizId: string) {
+    const questions = await this.questionRepo
+      .createQueryBuilder('question')
+      .select('question.id')
+      .where('question.quizId = :quizId', { quizId })
+      .orderBy('question.orderIndex', 'ASC')
+      .getMany();
+    return questions.map((q) => q.id);
+  }
+
+  /**
+   * Retrieves the authenticated user's progress state for a specific quiz.
+   * Calculates which page and question index the user should resume from,
+   * based on their answered questions and paused position.
    * @param userId - The UUID of the user
-   * @returns List of passed quizzes with their IDs and titles
+   * @param quizId - The UUID of the quiz
+   * @param limit - Number of questions per page used to compute currentPage (default: 10)
+   * @returns pausedAt index, array of submitted answers with questionIndex, and currentPage
+   */
+  async getQuizUserProgress(
+    userId: string,
+    quizId: string,
+    limit: number = 10,
+  ) {
+    const [progress, userAnswers, totalQuestions] = await Promise.all([
+      this.userQuizProgressRepo
+        .createQueryBuilder('p')
+        .where('p.userId = :userId', { userId })
+        .andWhere('p.quizId = :quizId', { quizId })
+        .getOne(),
+
+      this.userQuizAnswerRepo
+        .createQueryBuilder('a')
+        .select(['a.questionId', 'a.selectedAnswerId', 'q.orderIndex'])
+        .leftJoin('a.question', 'q')
+        .where('a.userId = :userId', { userId })
+        .andWhere('a.quizId = :quizId', { quizId })
+        .getMany(),
+
+      this.questionRepo
+        .createQueryBuilder('q')
+        .where('q.quizId = :quizId', { quizId })
+        .getCount(),
+    ]);
+
+    let pausedIndex = progress?.pausedAtQuestionIndex ?? 0;
+    let currentPage = 1;
+
+    const isCompleted =
+      progress?.status === QuizProgressStatus.COMPLETED ||
+      progress?.passed === true ||
+      progress?.status === QuizProgressStatus.TIMEOUT;
+
+    if (userAnswers.length > 0 && !isCompleted) {
+      const nextQuestionSeclected = userAnswers.find(
+        ({ question: { orderIndex } }) => orderIndex - 1 === pausedIndex + 1,
+      );
+
+      if (nextQuestionSeclected || pausedIndex + 1 === totalQuestions) {
+        pausedIndex = Array.from({ length: totalQuestions }).findIndex(
+          (_, i) =>
+            !userAnswers.some(
+              ({ question: { orderIndex } }) => orderIndex - 1 === i,
+            ),
+        );
+      } else {
+        pausedIndex += 1;
+      }
+      const questionsBefore = await this.questionRepo
+        .createQueryBuilder('q')
+        .where('q.quizId = :quizId', { quizId })
+        .andWhere('q.orderIndex < :orderIndex', {
+          orderIndex: pausedIndex + 1,
+        })
+        .getCount();
+
+      currentPage = Math.floor(questionsBefore / limit) + 1;
+
+      const totalPages = Math.ceil(totalQuestions / limit);
+      if (currentPage > totalPages) currentPage = totalPages;
+    } else {
+      currentPage = 1;
+      pausedIndex = 0;
+    }
+
+    const answers = userAnswers.map((a) => ({
+      questionId: a.questionId,
+      selectedAnswerId: a.selectedAnswerId,
+      questionIndex: a.question.orderIndex - 1,
+    }));
+
+    return {
+      pausedAt: pausedIndex,
+      answers,
+      currentPage,
+    };
+  }
+
+  /**
+   * Retrieves the names and IDs of all quizzes the user has passed.
+   * @param userId - The UUID of the user
+   * @returns List of passed quizzes with quizId and badgeTitle, sorted alphabetically by title
    */
   async getPassedQuizzesBadges(userId: string): Promise<
     {
       quizId: string;
-      badgeIcon: string;
       badgeTitle: string;
     }[]
   > {
     return this.userQuizProgressRepo
       .createQueryBuilder('progress')
       .select('progress.quizId', 'quizId')
-      .addSelect('quiz.badgeIcon', 'badgeIcon')
       .addSelect('quiz.badgeTitle', 'badgeTitle')
       .innerJoin('progress.quiz', 'quiz')
       .where('progress.userId = :userId', { userId })
@@ -127,85 +299,61 @@ export class QuizService {
       .orderBy('quiz.title', 'ASC')
       .getRawMany<{
         quizId: string;
-        badgeIcon: string;
         badgeTitle: string;
       }>();
   }
 
   /**
-   * Retrieves a user's answer for a specific question including question and selected answer details.
-   * @param userId - The ID of the user
-   * @param questionId - The ID of the question
-   * @returns The user's answer with question and selected answer relations
-   */
-  async getUserQuizAnswer(userId: string, questionId: string) {
-    return await this.userQuizAnswerRepo.findOne({
-      where: { userId, questionId },
-      relations: ['question', 'selectedAnswer'],
-    });
-  }
-
-  /**
-   * Retrieves a user's progress for a specific quiz including quiz and paused question details.
-   * @param userId - The ID of the user
-   * @param quizId - The ID of the quiz
-   * @returns The user's quiz progress with quiz and pausedAtQuestion relations
-   */
-  async getQuizProgress(userId: string, quizId: string) {
-    return await this.userQuizProgressRepo.findOne({
-      where: { userId, quizId },
-      relations: ['quiz', 'pausedAtQuestion'],
-    });
-  }
-
-  /**
    * Starts or restarts a quiz session for a user.
-   * - If user already passed, only updates attemptAt without resetting progress
-   * - If user has not passed, resets all progress fields and records attempt time
-   * @param userId - The ID of the user
-   * @param quizId - The ID of the quiz
+   * - If the user has COMPLETED or timed out: resets score to 0 and sets status to IN_PROGRESS
+   * - Otherwise (first attempt or paused): only updates attemptAt and status
+   * @param userId - The UUID of the user
+   * @param quizId - The UUID of the quiz
    */
   async startQuiz(userId: string, quizId: string) {
-    const progress = await this.userQuizProgressRepo.findOne({
+    const userProgress = await this.userQuizProgressRepo.findOne({
       where: { userId, quizId },
     });
 
-    if (progress?.passed) {
-      await this.userQuizProgressRepo.update(
-        { userId, quizId },
-        { attemptAt: new Date(), status: QuizProgressStatus.IN_PROGRESS },
+    if (
+      userProgress?.status === QuizProgressStatus.COMPLETED ||
+      userProgress?.status === QuizProgressStatus.TIMEOUT
+    ) {
+      await this.userQuizProgressRepo.upsert(
+        {
+          userId,
+          quizId,
+          status: QuizProgressStatus.IN_PROGRESS,
+          attemptAt: new Date(),
+          score: 0,
+        },
+        ['userId', 'quizId'],
       );
-      return;
+    } else {
+      await this.userQuizProgressRepo.upsert(
+        {
+          userId,
+          quizId,
+          status: QuizProgressStatus.IN_PROGRESS,
+          attemptAt: new Date(),
+        },
+        ['userId', 'quizId'],
+      );
     }
-
-    await this.userQuizProgressRepo.upsert(
-      {
-        userId,
-        quizId,
-        status: QuizProgressStatus.IN_PROGRESS,
-        score: null,
-        passed: false,
-        pausedAtQuestionId: null,
-        remainingTimeSeconds: null,
-        completedAt: null,
-        attemptAt: new Date(),
-      },
-      ['userId', 'quizId'],
-    );
   }
 
   /**
    * Saves a user's answer for a question and updates their quiz progress.
-   * - Calculates score based on correct answers so far
-   * - Marks quiz as COMPLETED if it's the last question
-   * - Deletes all answers if user passed (score === 100%)
-   * - Skips updating score and passed status if user already passed
-   * @param userId - The ID of the user
-   * @param quizId - The ID of the quiz
-   * @param questionId - The ID of the question being answered
-   * @param selectedAnswerId - The ID of the selected answer
-   * @throws NotFoundException if answer not found
-   * @throws BadRequestException if quiz not started yet
+   * - Calculates score based on correct answers out of total questions
+   * - Marks quiz as COMPLETED if this is the last question
+   * - Sets passed to true if score is 100% on the last question
+   * @param userId - The UUID of the user
+   * @param quizId - The UUID of the quiz
+   * @param questionId - The UUID of the question being answered
+   * @param selectedAnswerId - The UUID of the selected answer
+   * @returns score, passed, correctAnswers, totalQuestions, answeredQuestions, isLastQuestion, answerIsCorrect
+   * @throws NotFoundException if the question doesn't belong to this quiz or answer not found
+   * @throws BadRequestException if the quiz is not currently IN_PROGRESS
    * @returns Score, passed status, correct answers count, total questions, answered questions, and isLastQuestion flag
    */
   async insertUserProgress(
@@ -218,13 +366,13 @@ export class QuizService {
       where: { userId, quizId },
     });
 
-    const questionExists = await this.questionRepo.findOne({
+    const question = await this.questionRepo.findOne({
       where: {
         id: questionId,
         quizId,
       },
     });
-    if (!questionExists) {
+    if (!question) {
       throw new NotFoundException('Question does not belong to this quiz');
     }
 
@@ -235,18 +383,10 @@ export class QuizService {
     if (!answer)
       throw new NotFoundException('Answer not found for this question');
 
-    if (!progress) throw new BadRequestException('Quiz not started yet');
-
-    if (progress.status !== QuizProgressStatus.IN_PROGRESS) {
+    if (progress?.status !== QuizProgressStatus.IN_PROGRESS) {
       throw new BadRequestException('Quiz is not active');
     }
 
-    const existingAnswer = await this.userQuizAnswerRepo.findOne({
-      where: { userId, quizId, questionId },
-    });
-    if (existingAnswer) {
-      throw new BadRequestException('Question already answered');
-    }
     await this.userQuizAnswerRepo.upsert(
       {
         userId,
@@ -267,31 +407,26 @@ export class QuizService {
         }),
       ]);
 
-    if (totalQuestions === 0) {
-      throw new BadRequestException('Quiz has no questions');
-    }
-
     const score = (correctAnswers / totalQuestions) * 100;
     const isLastQuestion = answeredQuestions === totalQuestions;
     const passed = isLastQuestion && score === 100;
+    const userProgress = Math.round((answeredQuestions / totalQuestions) * 100);
 
     await this.userQuizProgressRepo.upsert(
       {
         userId,
         quizId,
-        ...(progress?.passed ? {} : { score, passed }),
+        score,
+        ...(passed ? { passed: true } : {}),
         status: isLastQuestion
           ? QuizProgressStatus.COMPLETED
           : QuizProgressStatus.IN_PROGRESS,
         completedAt: isLastQuestion ? new Date() : null,
-        pausedAtQuestionId: questionId,
+        pausedAtQuestionIndex: question.orderIndex - 1,
+        progress: isLastQuestion ? null : userProgress,
       },
       ['userId', 'quizId'],
     );
-
-    if (isLastQuestion || passed) {
-      await this.userQuizAnswerRepo.delete({ userId, quizId });
-    }
 
     return {
       score,
@@ -305,18 +440,42 @@ export class QuizService {
   }
 
   /**
-   * Pauses a quiz session for a user saving the current question and remaining time.
-   * @param userId - The ID of the user
-   * @param quizId - The ID of the quiz
-   * @param pausedAtQuestionId - The ID of the question the user paused at
-   * @param remainingTimeSeconds - The remaining time in seconds when the user paused
-   * @throws NotFoundException if quiz progress not found
+   * Deletes all submitted answers for a user on a specific quiz.
+   * Only executes if the quiz is COMPLETED or TIMEOUT and the user has not passed.
+   * @param userId - The UUID of the user
+   * @param quizId - The UUID of the quiz
+   * @throws NotFoundException if no progress record exists
    */
+  async deleteUserAnswers(userId: string, quizId: string) {
+    const progress = await this.userQuizProgressRepo.findOne({
+      where: { userId, quizId },
+    });
 
+    if (!progress) throw new NotFoundException('progress not found');
+
+    if (
+      (progress.status === QuizProgressStatus.COMPLETED ||
+        progress.status === QuizProgressStatus.TIMEOUT) &&
+      !progress.passed
+    ) {
+      await this.userQuizAnswerRepo.delete({ userId, quizId });
+    }
+  }
+
+  /**
+   * Pauses a quiz session, saving the current question index and remaining time.
+   * If remainingTimeSeconds is 0, the quiz is marked as TIMEOUT instead of PAUSED.
+   * @param userId - The UUID of the user
+   * @param quizId - The UUID of the quiz
+   * @param pausedAtQuestionIndex - Zero-based index of the question the user paused on
+   * @param remainingTimeSeconds - Remaining time in seconds at the point of pausing
+   * @throws BadRequestException if remainingTimeSeconds is negative or quiz is not IN_PROGRESS
+   * @throws NotFoundException if no progress record exists or question index is invalid
+   */
   async pauseQuiz(
     userId: string,
     quizId: string,
-    pausedAtQuestionId: string,
+    pausedAtQuestionIndex: number | undefined,
     remainingTimeSeconds: number,
   ) {
     if (remainingTimeSeconds < 0) {
@@ -325,20 +484,23 @@ export class QuizService {
     const progress = await this.userQuizProgressRepo.findOne({
       where: { userId, quizId },
     });
+
     if (!progress) {
       throw new NotFoundException('Quiz not started yet');
     }
 
-    if (progress.status !== QuizProgressStatus.IN_PROGRESS) {
+    if (!(progress.status === QuizProgressStatus.IN_PROGRESS)) {
       throw new BadRequestException('Quiz is not active');
     }
 
-    const question = await this.questionRepo.findOne({
-      where: { id: pausedAtQuestionId, quizId },
-    });
+    if (pausedAtQuestionIndex) {
+      const question = await this.questionRepo.findOne({
+        where: { orderIndex: pausedAtQuestionIndex + 1, quizId },
+      });
 
-    if (!question) {
-      throw new NotFoundException('Question does not belong to this quiz');
+      if (!question) {
+        throw new NotFoundException('Question does not belong to this quiz');
+      }
     }
 
     await this.userQuizProgressRepo.upsert(
@@ -349,7 +511,8 @@ export class QuizService {
           remainingTimeSeconds === 0
             ? QuizProgressStatus.TIMEOUT
             : QuizProgressStatus.PAUSED,
-        pausedAtQuestionId,
+        pausedAtQuestionIndex:
+          remainingTimeSeconds === 0 ? 0 : pausedAtQuestionIndex,
         remainingTimeSeconds,
       },
       ['userId', 'quizId'],
@@ -357,98 +520,158 @@ export class QuizService {
   }
 
   /**
-   * Retrieves all active quiz activities for a given user.
-   *
-   * Fetches quizzes that are currently in progress or paused,
-   * sorted by the most recent attempt first.
-   *
-   * @param userId - The UUID of the user whose activities are being fetched
-   * @returns A list of {@link UserQuizProgress} records containing progress status and quiz title
+   * Retrieves all active quiz activities for a user from the last 2 days.
+   * @param userId - The UUID of the user
+   * @returns Progress records with status, score, passed, attemptAt, remainingTimeSeconds, and quiz info
    */
   async getActivities(userId: string) {
-    return this.userQuizProgressRepo.find({
-      where: [
-        { userId, status: QuizProgressStatus.IN_PROGRESS },
-        { userId, status: QuizProgressStatus.PAUSED },
-      ],
-      select: {
-        id: true,
-        status: true,
-        score: true,
-        passed: true,
-        remainingTimeSeconds: true,
-        attemptAt: true,
-        quiz: {
-          title: true,
-        },
-      },
-      relations: ['quiz'],
-      order: { attemptAt: { direction: 'DESC', nulls: 'LAST' } },
-    });
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+    return this.userQuizProgressRepo
+      .createQueryBuilder('progress')
+      .leftJoin('progress.quiz', 'quiz')
+      .loadRelationCountAndMap('quiz.questionsCount', 'quiz.questions')
+      .select([
+        'progress.id',
+        'progress.status',
+        'progress.score',
+        'progress.passed',
+        'progress.attemptAt',
+        'progress.remainingTimeSeconds',
+        'progress.progress',
+        'quiz.id',
+        'quiz.title',
+        'quiz.description',
+        'quiz.timeInSeconds',
+      ])
+      .where('progress.userId = :userId', { userId })
+      .andWhere('progress.attemptAt >= :twoDaysAgo', { twoDaysAgo })
+      .orderBy('progress.attemptAt', 'DESC', 'NULLS LAST')
+      .getMany();
   }
 
   /**
-   * Retrieves statistics for a specific user.
-   * - Total quizzes in the app
-   * - Number of passed quizzes
-   * - Average score across passed quizzes
-   * - Total score across passed quizzes
-   * @param userId - The ID of the user
-   * @returns User stats including totalQuizzes, passedQuizzes, averageScore, and totalScore
+   * Retrieves aggregate statistics for a user across all their quiz attempts.
+   * @param userId - The UUID of the user
+   * @returns totalQuizzes attempted, passedQuizzes, averageScore, and totalScore
    */
   async getUserStats(userId: string) {
-    const [result, totalQuizzes] = await Promise.all([
+    const [passedResult, scoreResult, totalQuizzes]: [
+      { passedQuizzes: string },
+      { averageScore: string | null; totalScore: string | null },
+      { total: string },
+    ] = await Promise.all([
       this.userQuizProgressRepo
         .createQueryBuilder('progress')
         .select('COUNT(progress.quizId)', 'passedQuizzes')
-        .addSelect('AVG(progress.score)', 'averageScore')
-        .addSelect('SUM(progress.score)', 'totalScore')
         .where('progress.userId = :userId', { userId })
         .andWhere('progress.passed = :passed', { passed: true })
         .getRawOne(),
 
-      this.quizRepo.count(),
+      this.userQuizProgressRepo
+        .createQueryBuilder('progress')
+        .select('AVG(progress.score)', 'averageScore')
+        .addSelect('SUM(progress.score)', 'totalScore')
+        .where('progress.userId = :userId', { userId })
+        .getRawOne(),
+
+      this.userQuizProgressRepo
+        .createQueryBuilder('progress')
+        .select('COUNT(DISTINCT progress.quizId)', 'total')
+        .where('progress.userId = :userId', { userId })
+        .getRawOne(),
     ]);
 
     return {
-      totalQuizzes,
-      passedQuizzes: parseInt(result.passedQuizzes) || 0,
-      averageScore: parseFloat(result.averageScore) || 0,
-      totalScore: parseFloat(result.totalScore) || 0,
+      totalQuizzes: parseInt(totalQuizzes.total ?? '0'),
+      passedQuizzes: parseInt(passedResult.passedQuizzes ?? '0'),
+      averageScore: parseInt(scoreResult?.averageScore ?? '0'),
+      totalScore: parseInt(scoreResult?.totalScore ?? '0'),
     };
   }
 
   /**
-   * Retrieves the leaderboard of users ordered by passed quizzes and average score.
+   * Returns the top 3 users ranked by total score descending.
+   * @returns Array of up to 3 entries with userId, name, and totalScore
+   */
+  async getTopThree(): Promise<LeaderboardEntry[]> {
+    const result = await this.userRepo
+      .createQueryBuilder('user')
+      .select('user.id', 'userId')
+      .addSelect('user.name', 'name')
+      .addSelect('COALESCE(SUM(progress.score), 0)', 'totalScore')
+      .leftJoin(UserQuizProgress, 'progress', 'progress.userId = user.id')
+      .groupBy('user.id')
+      .addGroupBy('user.name')
+      .orderBy('"totalScore"', 'DESC')
+      .limit(3)
+      .getRawMany();
+
+    return result.map((item) => ({
+      ...item,
+      totalScore: parseInt(item.totalScore),
+    }));
+  }
+
+  /**
+   * Returns the leaderboard rank and stats for a specific user.
+   * Users with no quiz progress are included with zeroed stats and ranked at the bottom.
+   * @param userId - The UUID of the user
+   * @returns userId, name, totalScore, and rank position
+   */
+  async getUserRank(userId: string): Promise<UserRank> {
+    const result = await this.userRepo
+      .createQueryBuilder('user')
+      .select('user.id', 'userId')
+      .addSelect('user.name', 'name')
+      .addSelect('COALESCE(SUM(progress.score), 0)', 'totalScore')
+      .addSelect(
+        `RANK() OVER (ORDER BY COALESCE(SUM(progress.score), 0) DESC)`,
+        'rank',
+      )
+      .leftJoin(UserQuizProgress, 'progress', 'progress.userId = user.id')
+      .where('user.id = :userId', { userId })
+      .groupBy('user.id')
+      .addGroupBy('user.name')
+      .getRawOne();
+
+    return {
+      userId: result?.userId,
+      rank: Number(result?.rank ?? 0),
+      name: result?.name,
+      totalScore: parseInt(result?.totalScore ?? 0),
+    };
+  }
+
+  /**
+   * Retrieves a paginated leaderboard of all users ordered by total score descending.
+   * Users with no quiz progress are included with zeroed stats.
    * @param page - Page number (default: 1)
    * @param limit - Number of users per page (default: 10)
-   * @returns Paginated leaderboard with userId, name, passedQuizzes, averageScore, and totalScore
+   * @returns Paginated data with userId, name, totalScore, and meta with page/limit/totalPages
+   * @throws BadRequestException if page or limit is less than 1
    */
   async getLeaderboard(page: number = 1, limit: number = 10) {
     if (page < 1 || limit < 1) {
       throw new BadRequestException('page and limit must be >= 1');
     }
-    const countResult = await this.userQuizProgressRepo
-      .createQueryBuilder('progress')
-      .select('COUNT(DISTINCT progress.userId)', 'total')
-      .innerJoin(User, 'user', 'user.id = progress.userId')
-      .where('progress.passed = :passed', { passed: true })
+
+    const countResult = await this.userRepo
+      .createQueryBuilder('user')
+      .select('COUNT(DISTINCT user.id)', 'total')
       .getRawOne();
     const total = parseInt(countResult?.total) || 0;
 
-    const data = await this.userQuizProgressRepo
-      .createQueryBuilder('progress')
-      .select('progress.userId', 'userId')
+    const data = await this.userRepo
+      .createQueryBuilder('user')
+      .select('user.id', 'userId')
       .addSelect('user.name', 'name')
-      .addSelect('COUNT(progress.quizId)', 'passedQuizzes')
-      .addSelect('AVG(progress.score)', 'averageScore')
-      .addSelect('SUM(progress.score)', 'totalScore')
-      .innerJoin(User, 'user', 'user.id = progress.userId')
-      .where('progress.passed = :passed', { passed: true })
-      .groupBy('progress.userId')
+      .addSelect('COALESCE(SUM(progress.score), 0)', 'totalScore')
+      .leftJoin(UserQuizProgress, 'progress', 'progress.userId = user.id')
+      .groupBy('user.id')
       .addGroupBy('user.name')
-      .orderBy('"passedQuizzes"', 'DESC')
-      .addOrderBy('"averageScore"', 'DESC')
+      .orderBy('"totalScore"', 'DESC')
       .offset((page - 1) * limit)
       .limit(limit)
       .getRawMany();
@@ -456,12 +679,9 @@ export class QuizService {
     return {
       data: data.map((item) => ({
         ...item,
-        passedQuizzes: parseInt(item.passedQuizzes),
-        averageScore: parseFloat(item.averageScore),
-        totalScore: parseFloat(item.totalScore),
+        totalScore: parseInt(item.totalScore),
       })),
       meta: {
-        total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),

@@ -16,29 +16,29 @@ export class Token {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'text' })
   @Index()
   token!: string;
 
   @Column({ type: 'enum', enum: TokenType })
   type!: TokenType;
 
-  @Column()
+  @Column({ type: 'timestamptz' })
   expiresAt!: Date;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   attempts!: number;
 
-  @Column({ nullable: true })
-  lastSentAt!: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  lastSentAt!: Date | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
   @ManyToOne(() => User, (user) => user.tokens, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user!: User;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId!: string;
 }

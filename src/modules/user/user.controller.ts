@@ -30,7 +30,7 @@ export class UserController {
   /**
    * Retrieve the authenticated user's profile information.
    * @param id - The unique identifier of the current user, extracted from the request.
-   * @returns An object containing the user's name and email.
+   * @returns An object containing the user's name, email and providers.
    * @throws {NotFoundException} If the user does not exist in the database.
    */
   @ApiOperation({ summary: 'Get current user profile' })
@@ -62,7 +62,12 @@ export class UserController {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    return { name: user.name, email: user.email, providers: user.providers };
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      providers: user.providers,
+    };
   }
 
   /**

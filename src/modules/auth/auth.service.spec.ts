@@ -1,4 +1,3 @@
-// src/modules/auth/auth.service.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
@@ -64,8 +63,6 @@ describe('AuthService', () => {
     jest.clearAllMocks();
   });
 
-  // createUser
-
   describe('createUser', () => {
     it('should create user and send OTP', async () => {
       const user = { id: 'user-123', email: 'test@test.com', name: 'Test' };
@@ -87,10 +84,8 @@ describe('AuthService', () => {
     });
   });
 
-  // validateLocalUser
-
   describe('validateLocalUser', () => {
-    it('should return user on valid credentials', async () => {
+    it('should return user on valid credentials with verified email', async () => {
       const user = {
         id: 'user-123',
         email: 'test@test.com',
@@ -107,6 +102,7 @@ describe('AuthService', () => {
       });
 
       expect(result).toEqual(user);
+      expect(mockMailService.sendOtpEmail).not.toHaveBeenCalled();
     });
 
     it('should throw if account was deleted', async () => {
@@ -149,7 +145,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should send OTP if email not verified on login', async () => {
+    it('should send OTP and not throw if email not verified', async () => {
       mockUserService.findDeletedByEmail.mockResolvedValue(null);
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
@@ -159,20 +155,19 @@ describe('AuthService', () => {
         isEmailVerified: false,
       });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      mockUserService.getToken.mockResolvedValue(null);
-      mockUserService.saveToken.mockResolvedValue(undefined);
-      mockMailService.sendOtpEmail.mockResolvedValue(undefined);
+      mockUserService.getToken.mockResolvedValue({
+        lastSentAt: new Date(Date.now() - 30000),
+      });
 
-      await service.validateLocalUser({
+      const result = await service.validateLocalUser({
         email: 'test@test.com',
         password: 'Pass123!',
       });
 
-      expect(mockMailService.sendOtpEmail).toHaveBeenCalledTimes(1);
+      expect(mockMailService.sendOtpEmail).not.toHaveBeenCalled();
+      expect(result).toBeDefined();
     });
   });
-
-  // validateGoogleUser
 
   describe('validateGoogleUser', () => {
     it('should return user info for valid google user', async () => {
@@ -198,7 +193,7 @@ describe('AuthService', () => {
       });
     });
 
-    it('should throw if account was deleted', async () => {
+    it('should throw ConflictException if account was deleted', async () => {
       mockUserService.findDeletedByEmail.mockResolvedValue({ id: 'deleted' });
 
       await expect(
@@ -211,8 +206,6 @@ describe('AuthService', () => {
     });
   });
 
-  // generateOAuthCode
-
   describe('generateOAuthCode', () => {
     it('should generate and store a hashed OAuth code', async () => {
       mockUserService.saveToken.mockResolvedValue(undefined);
@@ -220,14 +213,23 @@ describe('AuthService', () => {
       const result = await service.generateOAuthCode('user-123');
 
       expect(typeof result).toBe('string');
-      expect(result).toHaveLength(64); // 32 bytes hex = 64 chars
-      expect(mockUserService.saveToken).toHaveBeenCalledTimes(1);
+      expect(result).toHaveLength(64);
       expect(mockUserService.saveToken).toHaveBeenCalledWith(
         'user-123',
         expect.any(String),
         TokenType.OAUTH_CODE,
         expect.any(Date),
       );
+    });
+
+    it('should store a hash of the code, not the raw code', async () => {
+      mockUserService.saveToken.mockResolvedValue(undefined);
+
+      const code = await service.generateOAuthCode('user-123');
+      const storedHash = mockUserService.saveToken.mock.calls[0][1];
+
+      expect(storedHash).not.toBe(code);
+      expect(storedHash).toHaveLength(64);
     });
 
     it('should generate unique codes on each call', async () => {
@@ -251,8 +253,6 @@ describe('AuthService', () => {
       expect(expiresAt.getTime()).toBeLessThanOrEqual(after + 61000);
     });
   });
-
-  // consumeOAuthCode
 
   describe('consumeOAuthCode', () => {
     it('should return user info on valid code', async () => {
@@ -281,7 +281,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw if token not found', async () => {
+    it('should throw UnauthorizedException if token not found', async () => {
       mockUserService.getToken.mockResolvedValue(null);
 
       await expect(service.consumeOAuthCode('invalid-code')).rejects.toThrow(
@@ -289,19 +289,27 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw if token is expired', async () => {
+    it('should throw UnauthorizedException and clear token if expired', async () => {
       mockUserService.getToken.mockResolvedValue({
         expiresAt: new Date(Date.now() - 1000),
+        userId: 'user-123',
       });
+      mockUserService.clearToken.mockResolvedValue(undefined);
 
       await expect(service.consumeOAuthCode('expired-code')).rejects.toThrow(
         UnauthorizedException,
       );
+
+      expect(mockUserService.clearToken).toHaveBeenCalledWith(
+        TokenType.OAUTH_CODE,
+        'user-123',
+      );
     });
 
-    it('should throw if user not found after clearing token', async () => {
+    it('should throw NotFoundException if user not found after clearing token', async () => {
       mockUserService.getToken.mockResolvedValue({
         expiresAt: new Date(Date.now() + 60000),
+        userId: 'user-123',
       });
       mockUserService.clearToken.mockResolvedValue(undefined);
       mockUserService.findOne.mockResolvedValue(null);
@@ -314,6 +322,7 @@ describe('AuthService', () => {
     it('should hash the code before querying the token store', async () => {
       mockUserService.getToken.mockResolvedValue({
         expiresAt: new Date(Date.now() + 60000),
+        userId: 'user-123',
       });
       mockUserService.clearToken.mockResolvedValue(undefined);
       mockUserService.findOne.mockResolvedValue({
@@ -326,16 +335,25 @@ describe('AuthService', () => {
 
       const calledWithHash = mockUserService.getToken.mock.calls[0][2];
       expect(calledWithHash).not.toBe('plain-code');
-      expect(calledWithHash).toHaveLength(64); // sha256 hex = 64 chars
+      expect(calledWithHash).toHaveLength(64);
     });
   });
 
-  // send otp
-
   describe('sendOtp', () => {
-    it('should throw if called within 60s cooldown', async () => {
+    it('should send OTP and return success message', async () => {
+      mockUserService.getToken.mockResolvedValue(null);
+      mockUserService.saveToken.mockResolvedValue(undefined);
+      mockMailService.sendOtpEmail.mockResolvedValue(undefined);
+
+      const result = await service.sendOtp('user-123', 'test@test.com', 'Test');
+
+      expect(result).toEqual({ message: 'OTP sent successfully' });
+      expect(mockMailService.sendOtpEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw BadRequestException if called within 60s cooldown', async () => {
       mockUserService.getToken.mockResolvedValue({
-        lastSentAt: new Date(Date.now() - 30000), // 30s ago
+        lastSentAt: new Date(Date.now() - 30000),
       });
 
       await expect(
@@ -354,7 +372,9 @@ describe('AuthService', () => {
         'Test',
         true,
       );
+
       expect(result).toEqual({ message: 'OTP already sent' });
+      expect(mockMailService.sendOtpEmail).not.toHaveBeenCalled();
     });
 
     it('should clear token and rethrow if mail fails', async () => {
@@ -373,21 +393,18 @@ describe('AuthService', () => {
     });
   });
 
-  // verifyOtp
-
   describe('verifyOtp', () => {
     it('should verify OTP and return user', async () => {
-      const otpToken = {
-        token: 'hashed-otp',
-        attempts: 0,
-        expiresAt: new Date(Date.now() + 60000),
-      };
       const user = {
         id: 'user-123',
         email: 'test@test.com',
         isEmailVerified: true,
       };
-      mockUserService.getToken.mockResolvedValue(otpToken);
+      mockUserService.getToken.mockResolvedValue({
+        token: 'hashed-otp',
+        attempts: 0,
+        expiresAt: new Date(Date.now() + 60000),
+      });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       mockUserService.verifyUser.mockResolvedValue(undefined);
       mockUserService.findOne.mockResolvedValue(user);
@@ -428,7 +445,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw if OTP is invalid', async () => {
+    it('should throw and increment attempts if OTP is invalid', async () => {
       mockUserService.getToken.mockResolvedValue({
         attempts: 0,
         expiresAt: new Date(Date.now() + 60000),
@@ -439,10 +456,12 @@ describe('AuthService', () => {
       await expect(service.verifyOtp('user-123', 'wrong')).rejects.toThrow(
         BadRequestException,
       );
+
+      expect(mockUserService.incrementAttempts).toHaveBeenCalledWith(
+        'user-123',
+      );
     });
   });
-
-  // resendOtp
 
   describe('resendOtp', () => {
     it('should resend OTP for unverified user', async () => {
@@ -457,10 +476,11 @@ describe('AuthService', () => {
       mockMailService.sendOtpEmail.mockResolvedValue(undefined);
 
       const result = await service.resendOtp('user-123');
+
       expect(result).toEqual({ message: 'OTP sent successfully' });
     });
 
-    it('should throw if email already verified', async () => {
+    it('should throw BadRequestException if email already verified', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         isEmailVerified: true,
@@ -471,7 +491,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw if user not found', async () => {
+    it('should throw NotFoundException if user not found', async () => {
       mockUserService.findOne.mockResolvedValue(null);
 
       await expect(service.resendOtp('user-123')).rejects.toThrow(
@@ -480,10 +500,8 @@ describe('AuthService', () => {
     });
   });
 
-  // changePassword
-
   describe('changePassword', () => {
-    it('should change password successfully for LOCAL provider', async () => {
+    it('should change password for LOCAL-only provider', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         password: 'hashed',
@@ -505,7 +523,7 @@ describe('AuthService', () => {
       });
     });
 
-    it('should throw if user not found', async () => {
+    it('should throw NotFoundException if user not found', async () => {
       mockUserService.findOne.mockResolvedValue(null);
 
       await expect(
@@ -516,7 +534,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw if currentPassword is missing for LOCAL provider', async () => {
+    it('should throw if currentPassword missing for LOCAL-only provider', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         password: 'hashed',
@@ -531,7 +549,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw if current password is wrong for LOCAL provider', async () => {
+    it('should throw if current password is wrong for LOCAL-only provider', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         password: 'hashed',
@@ -548,7 +566,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw if new password is same as old for LOCAL provider', async () => {
+    it('should throw if new password is same as current for LOCAL-only provider', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         password: 'hashed',
@@ -567,7 +585,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should change password without currentPassword for OAuth provider', async () => {
+    it('should change password without currentPassword for OAuth-only provider', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         password: null,
@@ -583,9 +601,10 @@ describe('AuthService', () => {
       expect(mockUserService.updateUser).toHaveBeenCalledWith('user-123', {
         password: 'new-hashed',
       });
+      expect(bcrypt.compare).not.toHaveBeenCalled();
     });
 
-    it('should change password without currentPassword for mixed providers (LOCAL + GOOGLE)', async () => {
+    it('should change password without currentPassword for mixed LOCAL+GOOGLE provider', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         password: 'hashed',
@@ -601,10 +620,9 @@ describe('AuthService', () => {
       expect(mockUserService.updateUser).toHaveBeenCalledWith('user-123', {
         password: 'new-hashed',
       });
+      expect(bcrypt.compare).not.toHaveBeenCalled();
     });
   });
-
-  // resetPassword
 
   describe('resetPassword', () => {
     it('should reset password successfully', async () => {
@@ -616,6 +634,7 @@ describe('AuthService', () => {
         id: 'user-123',
         email: 'test@test.com',
         isEmailVerified: true,
+        providers: [Provider.LOCAL],
       });
       (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
       mockUserService.updateUser.mockResolvedValue(undefined);
@@ -629,7 +648,7 @@ describe('AuthService', () => {
       expect(result).toMatchObject({ id: 'user-123' });
     });
 
-    it('should throw if token not found', async () => {
+    it('should throw BadRequestException if token not found', async () => {
       mockUserService.getToken.mockResolvedValue(null);
 
       await expect(
@@ -637,7 +656,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw if token is expired', async () => {
+    it('should throw BadRequestException and clear token if expired', async () => {
       mockUserService.getToken.mockResolvedValue({
         expiresAt: new Date(Date.now() - 1000),
         userId: 'user-123',
@@ -647,20 +666,52 @@ describe('AuthService', () => {
       await expect(
         service.resetPassword('newPass123!', 'expired-token'),
       ).rejects.toThrow(BadRequestException);
+
+      expect(mockUserService.clearToken).toHaveBeenCalledWith(
+        TokenType.PASSWORD_RESET,
+        'user-123',
+      );
     });
 
-    it('should throw if user not found after reset', async () => {
+    it('should throw NotFoundException if user not found', async () => {
       mockUserService.getToken.mockResolvedValue({
         expiresAt: new Date(Date.now() + 60000),
         userId: 'user-123',
       });
-      mockUserService.findOne.mockResolvedValue(null);
-      mockUserService.clearToken.mockResolvedValue(undefined);
       (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
+      mockUserService.updateUser.mockResolvedValue(undefined);
+      mockUserService.clearToken.mockResolvedValue(undefined);
+      mockUserService.findOne.mockResolvedValue(null);
 
       await expect(
         service.resetPassword('newPass123!', 'valid-token'),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should add LOCAL to providers for OAuth-only user after reset', async () => {
+      mockUserService.getToken.mockResolvedValue({
+        expiresAt: new Date(Date.now() + 60000),
+        userId: 'user-123',
+      });
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@test.com',
+        name: 'Test',
+        isEmailVerified: true,
+        providers: [Provider.GOOGLE],
+      });
+      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
+      mockUserService.updateUser.mockResolvedValue(undefined);
+      mockUserService.clearToken.mockResolvedValue(undefined);
+
+      await service.resetPassword('newPass123!', 'valid-token');
+
+      expect(mockUserService.updateUser).toHaveBeenCalledWith(
+        'user-123',
+        expect.objectContaining({
+          providers: expect.arrayContaining([Provider.LOCAL, Provider.GOOGLE]),
+        }),
+      );
     });
 
     it('should send OTP if email not verified after reset', async () => {
@@ -673,11 +724,13 @@ describe('AuthService', () => {
         email: 'test@test.com',
         name: 'Test',
         isEmailVerified: false,
+        providers: [Provider.LOCAL],
       });
+      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
+      mockUserService.updateUser.mockResolvedValue(undefined);
       mockUserService.clearToken.mockResolvedValue(undefined);
       mockUserService.saveToken.mockResolvedValue(undefined);
       mockMailService.sendOtpEmail.mockResolvedValue(undefined);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
 
       await service.resetPassword('newPass123!', 'valid-token');
 
@@ -685,19 +738,20 @@ describe('AuthService', () => {
     });
   });
 
-  // logout
-
   describe('logout', () => {
-    it('should logout user and clear refresh token', async () => {
+    it('should clear refresh token on logout', async () => {
       mockUserService.findOne.mockResolvedValue({ id: 'user-123' });
       mockUserService.clearToken.mockResolvedValue(undefined);
 
       await service.logout('user-123');
 
-      expect(mockUserService.clearToken).toHaveBeenCalledTimes(1);
+      expect(mockUserService.clearToken).toHaveBeenCalledWith(
+        TokenType.REFRESH,
+        'user-123',
+      );
     });
 
-    it('should throw if user not found', async () => {
+    it('should throw UnauthorizedException if user not found', async () => {
       mockUserService.findOne.mockResolvedValue(null);
 
       await expect(service.logout('user-123')).rejects.toThrow(
@@ -705,8 +759,6 @@ describe('AuthService', () => {
       );
     });
   });
-
-  // forceVerifyUser
 
   describe('forceVerifyUser', () => {
     it('should force verify user in test environment', async () => {
@@ -720,7 +772,7 @@ describe('AuthService', () => {
       });
     });
 
-    it('should throw in non-test environment', async () => {
+    it('should throw ForbiddenException in non-test environment', async () => {
       process.env.NODE_ENV = 'production';
 
       await expect(service.forceVerifyUser('user-123')).rejects.toThrow(
@@ -730,8 +782,6 @@ describe('AuthService', () => {
       process.env.NODE_ENV = 'test';
     });
   });
-
-  // deleteTestUser
 
   describe('deleteTestUser', () => {
     it('should delete user in test environment', async () => {
@@ -745,7 +795,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw in non-test environment', async () => {
+    it('should throw ForbiddenException in non-test environment', async () => {
       process.env.NODE_ENV = 'production';
 
       await expect(service.deleteTestUser('test@test.com')).rejects.toThrow(
@@ -755,7 +805,7 @@ describe('AuthService', () => {
       process.env.NODE_ENV = 'test';
     });
 
-    it('should delete from deleted-users table when fromDeleted=true', async () => {
+    it('should call deleteTestDeletedEmail when fromDeleted=true', async () => {
       mockUserService.deleteTestDeletedEmail.mockResolvedValue(undefined);
 
       await service.deleteTestUser('test@test.com', true);
@@ -763,13 +813,12 @@ describe('AuthService', () => {
       expect(mockUserService.deleteTestDeletedEmail).toHaveBeenCalledWith(
         'test@test.com',
       );
+      expect(mockUserService.deleteTestUser).not.toHaveBeenCalled();
     });
   });
 
-  // generateTokens
-
   describe('generateTokens', () => {
-    it('should generate access and refresh tokens', async () => {
+    it('should return access and refresh tokens', async () => {
       mockUserService.saveToken.mockResolvedValue(undefined);
 
       const result = await service.generateTokens({
@@ -783,7 +832,7 @@ describe('AuthService', () => {
       expect(mockJwtService.sign).toHaveBeenCalledTimes(2);
     });
 
-    it('should store hashed refresh token, not raw', async () => {
+    it('should store hashed refresh token, not the raw JWT', async () => {
       mockUserService.saveToken.mockResolvedValue(undefined);
 
       await service.generateTokens({
@@ -793,15 +842,13 @@ describe('AuthService', () => {
       });
 
       const storedToken = mockUserService.saveToken.mock.calls[0][1];
-      expect(storedToken).not.toBe('mock-token'); // raw JWT from mockJwtService
-      expect(storedToken).toHaveLength(64); // sha256 hex
+      expect(storedToken).not.toBe('mock-token');
+      expect(storedToken).toHaveLength(64);
     });
   });
 
-  // forgotPassword
-
   describe('forgotPassword', () => {
-    it('should return generic message if user not found', async () => {
+    it('should return generic message if user not found (email enumeration prevention)', async () => {
       mockUserService.findOne.mockResolvedValue(null);
 
       const result = await service.forgotPassword('notfound@test.com');
@@ -812,7 +859,7 @@ describe('AuthService', () => {
       expect(mockMailService.sendResetPasswordEmail).not.toHaveBeenCalled();
     });
 
-    it('should send reset email if user exists', async () => {
+    it('should send reset email and return generic message if user exists', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         email: 'test@test.com',
@@ -829,7 +876,7 @@ describe('AuthService', () => {
       expect(mockMailService.sendResetPasswordEmail).toHaveBeenCalledTimes(1);
     });
 
-    it('should clear token if sending email fails', async () => {
+    it('should clear token and still return generic message if email sending fails', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         email: 'test@test.com',
@@ -840,8 +887,11 @@ describe('AuthService', () => {
         new Error('SMTP error'),
       );
 
-      await service.forgotPassword('test@test.com');
-      // Should still return generic message (email enumeration prevention)
+      const result = await service.forgotPassword('test@test.com');
+
+      expect(result).toEqual({
+        message: 'If email exists, reset link has been sent',
+      });
       expect(mockUserService.clearToken).toHaveBeenCalledWith(
         TokenType.PASSWORD_RESET,
         'user-123',
@@ -849,10 +899,8 @@ describe('AuthService', () => {
     });
   });
 
-  // refreshTokens
-
   describe('refreshTokens', () => {
-    it('should return new token pair', async () => {
+    it('should return new token pair on valid refresh', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         email: 'test@test.com',
@@ -870,7 +918,23 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('refreshToken');
     });
 
-    it('should throw if user not found', async () => {
+    it('should hash the old token before passing to clearToken', async () => {
+      mockUserService.findOne.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@test.com',
+        isEmailVerified: true,
+      });
+      mockUserService.clearToken.mockResolvedValue({ affected: 1 });
+      mockUserService.saveToken.mockResolvedValue(undefined);
+
+      await service.refreshTokens('user-123', 'raw-token');
+
+      const passedHash = mockUserService.clearToken.mock.calls[0][2];
+      expect(passedHash).not.toBe('raw-token');
+      expect(passedHash).toHaveLength(64);
+    });
+
+    it('should throw UnauthorizedException if user not found', async () => {
       mockUserService.findOne.mockResolvedValue(null);
 
       await expect(
@@ -878,7 +942,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should throw if old token does not match', async () => {
+    it('should throw UnauthorizedException if old token hash does not match', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: 'user-123',
         email: 'test@test.com',
