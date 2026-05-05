@@ -48,7 +48,7 @@ export class UserQuizProgress {
     nullable: true,
     transformer: {
       to: (value: number) => value,
-      from: (value: string) => (value ? parseInt(value) : null),
+      from: (value: string) => (value ? parseInt(value, 10) : null),
     },
   })
   score!: number | null;

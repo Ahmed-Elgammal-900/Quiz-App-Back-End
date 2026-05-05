@@ -92,7 +92,7 @@ export class QuizService {
       where: { id: quizId },
     });
 
-    if (!quizTitle[0].title) return null;
+    if (!quizTitle.length || !quizTitle[0].title) return null;
 
     const targetPage = page;
     const skip = (targetPage - 1) * limit;
@@ -493,7 +493,7 @@ export class QuizService {
       throw new BadRequestException('Quiz is not active');
     }
 
-    if (pausedAtQuestionIndex) {
+    if (pausedAtQuestionIndex !== undefined && pausedAtQuestionIndex !== null) {
       const question = await this.questionRepo.findOne({
         where: { orderIndex: pausedAtQuestionIndex + 1, quizId },
       });
@@ -584,10 +584,10 @@ export class QuizService {
     ]);
 
     return {
-      totalQuizzes: parseInt(totalQuizzes.total ?? '0'),
-      passedQuizzes: parseInt(passedResult.passedQuizzes ?? '0'),
-      averageScore: parseInt(scoreResult?.averageScore ?? '0'),
-      totalScore: parseInt(scoreResult?.totalScore ?? '0'),
+      totalQuizzes: parseInt(totalQuizzes.total ?? '0', 10),
+      passedQuizzes: parseInt(passedResult.passedQuizzes ?? '0', 10),
+      averageScore: parseInt(scoreResult?.averageScore ?? '0', 10),
+      totalScore: parseInt(scoreResult?.totalScore ?? '0', 10),
     };
   }
 
@@ -610,7 +610,7 @@ export class QuizService {
 
     return result.map((item) => ({
       ...item,
-      totalScore: parseInt(item.totalScore),
+      totalScore: parseInt(item.totalScore, 10),
     }));
   }
 
@@ -640,7 +640,7 @@ export class QuizService {
       userId: result?.userId,
       rank: Number(result?.rank ?? 0),
       name: result?.name,
-      totalScore: parseInt(result?.totalScore ?? 0),
+      totalScore: parseInt(result?.totalScore ?? '0', 10),
     };
   }
 
@@ -661,7 +661,7 @@ export class QuizService {
       .createQueryBuilder('user')
       .select('COUNT(DISTINCT user.id)', 'total')
       .getRawOne();
-    const total = parseInt(countResult?.total) || 0;
+    const total = parseInt(countResult?.total, 10) || 0;
 
     const data = await this.userRepo
       .createQueryBuilder('user')
@@ -679,11 +679,11 @@ export class QuizService {
     return {
       data: data.map((item) => ({
         ...item,
-        totalScore: parseInt(item.totalScore),
+        totalScore: parseInt(item.totalScore, 10),
       })),
       meta: {
         page,
-        limit,
+
         totalPages: Math.ceil(total / limit),
       },
     };
