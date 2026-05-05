@@ -30,7 +30,7 @@ export class UserController {
   /**
    * Retrieve the authenticated user's profile information.
    * @param id - The unique identifier of the current user, extracted from the request.
-   * @returns An object containing the user's name, email and providers.
+   * @returns An object containing the user's id, name, email and providers.
    * @throws {NotFoundException} If the user does not exist in the database.
    */
   @ApiOperation({ summary: 'Get current user profile' })
@@ -40,6 +40,7 @@ export class UserController {
     schema: {
       type: 'object',
       properties: {
+        id: { type: 'string', example: 'uuid-here' },
         name: { type: 'string', example: 'example' },
         email: { type: 'string', example: 'example@email.com' },
         providers: {

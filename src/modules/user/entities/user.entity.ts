@@ -16,10 +16,10 @@ export class User {
   email!: string;
 
   @Column({ nullable: true })
-  password!: string;
+  password!: string | null;
 
   @Column({ nullable: true })
-  googleId!: string;
+  googleId!: string | null;
 
   @Column({
     type: 'simple-array',

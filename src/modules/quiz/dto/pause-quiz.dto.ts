@@ -5,6 +5,7 @@ export class PauseQuizDto {
   @ApiProperty({
     description: 'Index of the question the user paused on',
     example: 3,
+    required: false,
   })
   @IsInt()
   @Min(0)

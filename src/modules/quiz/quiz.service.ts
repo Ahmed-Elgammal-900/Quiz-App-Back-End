@@ -87,12 +87,14 @@ export class QuizService {
     page: number = 1,
     limit: number = 10,
   ) {
-    const quizTitle = await this.quizRepo.find({
+    const quiz = await this.quizRepo.findOne({
       select: { title: true },
       where: { id: quizId },
     });
 
-    if (!quizTitle[0].title) return null;
+    if (!quiz) {
+      throw new NotFoundException('quiz not found');
+    }
 
     const targetPage = page;
     const skip = (targetPage - 1) * limit;
@@ -113,13 +115,16 @@ export class QuizService {
       .where('question.quizId = :quizId', { quizId })
       .getCount();
 
-    const questions = await this.questionRepo
-      .createQueryBuilder('question')
-      .leftJoinAndSelect('question.answers', 'answer')
-      .where('question.id IN (:...ids)', { ids })
-      .orderBy('question.orderIndex', 'ASC')
-      .addOrderBy('answer.orderIndex', 'ASC')
-      .getMany();
+    const questions =
+      ids.length === 0
+        ? []
+        : await this.questionRepo
+            .createQueryBuilder('question')
+            .leftJoinAndSelect('question.answers', 'answer')
+            .where('question.id IN (:...ids)', { ids })
+            .orderBy('question.orderIndex', 'ASC')
+            .addOrderBy('answer.orderIndex', 'ASC')
+            .getMany();
 
     const safeQuestions = questions.map(({ answers, orderIndex, ...q }) => {
       return {
@@ -129,7 +134,7 @@ export class QuizService {
     });
 
     return {
-      quizTitle: quizTitle[0].title,
+      quizTitle: quiz.title,
       questions: safeQuestions,
       pagination: {
         total,

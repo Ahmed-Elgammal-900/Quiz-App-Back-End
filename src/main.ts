@@ -19,16 +19,18 @@ async function bootstrap() {
   if (!frontEndOriginRaw) {
     throw new Error('FRONT_END_ORIGIN is required');
   }
-  let frontEndOrigin: string;
+
+  let parsed: URL;
   try {
-    const parsed = new URL(frontEndOriginRaw);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      throw new Error('invalid front end origin');
-    }
-    frontEndOrigin = parsed.origin;
+    parsed = new URL(frontEndOriginRaw);
   } catch {
     throw new Error('FRONT_END_ORIGIN must be a valid absolute http(s) URL');
   }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error('FRONT_END_ORIGIN must use http or https protocol');
+  }
+  const frontEndOrigin = parsed.origin;
 
   const isProduction = process.env.NODE_ENV === 'production';
   // app init

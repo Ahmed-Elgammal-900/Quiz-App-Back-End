@@ -93,7 +93,7 @@ export class AuthService {
       throw new BadRequestException('Invalid email or password');
     }
 
-    const truePassword = await bcrypt.compare(password, user.password);
+    const truePassword = await bcrypt.compare(password, user.password ?? '');
 
     if (!truePassword) {
       throw new BadRequestException('Invalid email or password');
@@ -150,9 +150,10 @@ export class AuthService {
     );
 
     if (!user.providers.includes(Provider.LOCAL)) {
-      user.providers = [...user.providers, Provider.LOCAL];
+      const providers = [...user.providers, Provider.LOCAL];
+      user.providers = providers;
       await this.userService.updateUser(user.id, {
-        providers: [...user.providers, Provider.LOCAL],
+        providers,
       });
     }
 
@@ -177,7 +178,7 @@ export class AuthService {
   async changePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
     const user = await this.userService.findOne({ id });
     if (!user) throw new NotFoundException('User not found');
-    if (user.providers.length === 1 && user.providers[0] === Provider.LOCAL) {
+    if (user.providers.includes(Provider.LOCAL) && user.password) {
       if (!updatePasswordDto.currentPassword) {
         throw new BadRequestException('current password required');
       }

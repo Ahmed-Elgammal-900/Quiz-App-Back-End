@@ -17,7 +17,7 @@ import { User } from '../user/entities/user.entity';
       Answer,
       UserQuizAnswer,
       UserQuizProgress,
-      User
+      User,
     ]),
   ],
   controllers: [QuizController],

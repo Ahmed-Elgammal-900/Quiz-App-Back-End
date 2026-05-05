@@ -22,14 +22,14 @@ export class UserQuizProgress {
   @JoinColumn({ name: 'quizId' })
   quiz!: Quiz;
 
-  @Column({ name: 'quizId' })
+  @Column({ name: 'quizId', type: 'uuid' })
   quizId!: string;
 
   @ManyToOne(() => User, (user) => user.quizProgresses, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user!: User;
 
-  @Column({ name: 'userId' })
+  @Column({ name: 'userId', type: 'uuid' })
   userId!: string;
 
   @Column({ name: 'pausedAtQuestionIndex', type: 'int', default: 0 })
@@ -48,7 +48,7 @@ export class UserQuizProgress {
     nullable: true,
     transformer: {
       to: (value: number) => value,
-      from: (value: string) => (value ? parseInt(value) : null),
+      from: (value: string) => (value == null ? null : Number(value)),
     },
   })
   score!: number | null;
