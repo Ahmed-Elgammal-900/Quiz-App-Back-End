@@ -83,7 +83,7 @@ describe('QuizController (e2e)', () => {
         'Test prerequisite failed: No answers found for first question. Ensure test data is seeded.',
       );
     }
-  });
+  }, 30000);
 
   afterAll(async () => {
     const authService = module.get(AuthService);

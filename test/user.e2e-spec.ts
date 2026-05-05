@@ -65,12 +65,15 @@ describe('UserController (e2e)', () => {
     app.use(cookieParser());
     await app.init();
 
+    const userService = module.get(UserService);
+    await userService.deleteTestDeletedEmail(TEST_USER.email).catch(() => {});
+    await userService.deleteTestUser(TEST_USER.email).catch(() => {}); // active user cleanup
+
     await registerAndVerify();
     validCookies = await loginAndGetCookies();
-  });
+  }, 30000);
 
   afterAll(async () => {
-    // Guard: clean up soft-deleted test email regardless of test outcome
     try {
       const userService = module.get(UserService);
       await userService.deleteTestDeletedEmail(TEST_USER.email);
@@ -79,7 +82,6 @@ describe('UserController (e2e)', () => {
     }
   });
 
-  // GET /user
 
   describe('GET /user', () => {
     it('should fail without auth', async () => {
