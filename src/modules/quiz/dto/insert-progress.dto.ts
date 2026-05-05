@@ -8,7 +8,7 @@ export class InsertProgressDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  questionId: string;
+  questionId!: string;
 
   @ApiProperty({
     description: 'UUID of the selected answer',
@@ -16,5 +16,5 @@ export class InsertProgressDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  selectedAnswerId: string;
+  selectedAnswerId!: string;
 }

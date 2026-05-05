@@ -9,7 +9,7 @@
 ![Jest](https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 ![Version](https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge)
-![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
 > A scalable, production-ready REST API for the Quizzer platform, featuring secure JWT-based authentication, comprehensive quiz management, and a dynamic leaderboard system that enables users to evaluate their performance and engage in competitive gameplay
 
@@ -129,41 +129,48 @@ you will find docs on `http://localhost:3000/docs` (or the port defined in your 
 
 ### Auth — `/auth`
 
-| Method | Endpoint           | Description                                                  | Auth Required |
-| ------ | ------------------ | ------------------------------------------------------------ | ------------- |
-| POST   | `/signup`          | Register a new user                                          | ❌            |
-| POST   | `/login`           | Login and receive a token                                    | ❌            |
-| GET    | `/google`          | redirect to google auth                                      | ❌            |
-| GET    | `/google/callback` | get google user info to login or signup                      | ❌            |
-| POST   | `/refresh-token`   | rotate access_token and refresh_token                        | ✅            |
-| PATCH  | `/change-password` | change user password                                         | ✅            |
-| POST   | `/forget-password` | request a change for a user password by email                | ❌            |
-| POST   | `/reset-password`  | recieve new password with token to change forgotton password | ❌            |
-| POST   | `/verify-email`    | verify user email by otp                                     | ❌            |
-| POST   | `/resend-otp`      | resend otp for a user on email                               | ❌            |
-| POST   | `/logout`          | logout user and remove cookie tokens                         | ✅            |
+| Method | Endpoint               | Description                                                  | Auth Required |
+| ------ | ---------------------- | ------------------------------------------------------------ | ------------- |
+| POST   | `/signup`              | Register a new user                                          | ❌            |
+| POST   | `/login`               | Login and receive a token                                    | ❌            |
+| GET    | `/google`              | redirect to google auth                                      | ❌            |
+| GET    | `/google/callback`     | get google user info to login or signup                      | ❌            |
+| GET    | `/exchange`            | exchange oauth code with session tokens                      | ❌            |
+| POST   | `/refresh-token`       | rotate access_token and refresh_token                        | ❌            |
+| PATCH  | `/change-password`     | change user password                                         | ✅            |
+| POST   | `/forget-password`     | request a change for a user password by email                | ❌            |
+| POST   | `/reset-password`      | recieve new password with token to change forgotton password | ❌            |
+| POST   | `/verify-email`        | verify user email by otp                                     | ❌            |
+| POST   | `/resend-otp`          | resend otp for a user on email                               | ❌            |
+| POST   | `/verify-access-token` | verify access token                                          | ✅            |
+| POST   | `/logout`              | logout user and remove cookie tokens                         | ✅            |
 
 ### User — `/user`
 
-| Method | Endpoint | Description                                        | Auth Required |
-| ------ | -------- | -------------------------------------------------- | ------------- |
-| DELETE | `/`      | delete A user from system and remove cookie tokens | ✅            |
+| Method | Endpoint | Description                                            | Auth Required |
+| ------ | -------- | ------------------------------------------------------ | ------------- |
+| GET    | `/`      | retrieve the authenticated user's profile information. | ✅            |
+| DELETE | `/`      | delete A user from system and remove cookie tokens     | ✅            |
 
 ### Quizzes — `/quizzes`
 
-| Method | Endpoint                          | Description                                 | Auth Required |
-| ------ | --------------------------------- | ------------------------------------------- | ------------- |
-| GET    | `/`                               | Get all quizzes with user progress if exist | ✅            |
-| GET    | `/:quizId/questions`              | Get a questions of the quiz                 | ✅            |
-| GET    | `/questions/:questionId/answers`  | Get the choices of the question             | ✅            |
-| GET    | `/questions/:questionId/answered` | Get user answer for the question            | ✅            |
-| GET    | `/passed`                         | Get passed quizzes for the user             | ✅            |
-| GET    | `/:quizId/progress`               | Get progress of specific quiz               | ✅            |
-| POST   | `/:quizId/start`                  | Begin the quiz                              | ✅            |
-| POST   | `/:quizId/pause`                  | Pause the started quiz                      | ✅            |
-| POST   | `/:quizId/progress`               | Insert user progress                        | ✅            |
-| GET    | `/stats`                          | Get the user stats in the platform          | ✅            |
-| GET    | `/leaderboard`                    | Get leaderboard and ranked users            | ✅            |
+| Method | Endpoint                       | Description                                                                                                    | Auth Required |
+| ------ | ------------------------------ | -------------------------------------------------------------------------------------------------------------- | ------------- |
+| GET    | `/`                            | Get all quizzes with their progress status for the authenticated user.                                         | ✅            |
+| GET    | `/activities`                  | Get all quizzes currently in progress or paused, sorted by most recent attempt.                                | ✅            |
+| GET    | `/stats`                       | Get aggregate stats for the authenticated user: total quizzes, passed quizzes, average score, and total score. | ✅            |
+| GET    | `/top-three`                   | Get the top 3 users ranked by passed quizzes, total score, and average score.                                  | ✅            |
+| GET    | `/my-rank`                     | Get the authenticated user's current leaderboard rank and stats.                                               | ✅            |
+| GET    | `/leaderboard`                 | Get the paginated leaderboard ordered by passed quizzes, total score, and average score.                       | ✅            |
+| GET    | `/earned-badges`               | Get the names and IDs of all quizzes the authenticated user has passed.                                        | ✅            |
+| GET    | `/:quizId/get-result`          | Get the authenticated user's final result for a completed quiz.                                                | ✅            |
+| GET    | `/:quizId/questions`           | Get paginated questions with their answers for a specific quiz.                                                | ✅            |
+| GET    | `/:quizId/questions/ids`       | Get only the IDs of all questions belonging to a specific quiz.                                                | ✅            |
+| GET    | `/:quizId/progress`            | Get the authenticated user's progress records for a specific quiz.                                             | ✅            |
+| POST   | `/:quizId/start`               | Start or restart a quiz. If the user already passed, only updates `attemptAt`. Otherwise resets all progress.  | ✅            |
+| POST   | `/:quizId/pause`               | Pause a quiz session, saving the current question index and remaining time.                                    | ✅            |
+| POST   | `/:quizId/progress`            | Save the user's answer for a question and update quiz progress. Marks quiz as completed if last question.      | ✅            |
+| DELETE | `/:quizId/delete-user-answers` | Delete all submitted answers for the authenticated user on a specific quiz.                                    | ✅            |
 
 > 📌 All protected routes require an `cookies token` .
 
@@ -194,6 +201,7 @@ src
 │   │   │   └── token-type.constant.ts
 │   │   ├── dto
 │   │   │   ├── change-password.dto.ts
+│   │   │   ├── exchange-query.dto.ts
 │   │   │   ├── forget-password.dto.ts
 │   │   │   ├── google-auth.dto.ts
 │   │   │   ├── login.dto.ts
@@ -204,7 +212,7 @@ src
 │   │   ├── strategies
 │   │   │   ├── googleAuth.strategy.ts
 │   │   │   ├── jwt.strategy.ts
-│   │   │   └── jwtRefersh.strategy.ts
+│   │   │   └── jwtRefresh.strategy.ts
 │   │   ├── types
 │   │   │   └── response-types.ts
 │   │   ├── auth.controller.spec.ts
@@ -232,6 +240,8 @@ src
 │   │   │   ├── quiz.entity.ts
 │   │   │   ├── user-progress.entity.ts
 │   │   │   └── user-quiz-answer.entity.ts
+│   │   ├── types
+│   │   │   └── quiz.types.ts
 │   │   ├── quiz.controller.spec.ts
 │   │   ├── quiz.controller.ts
 │   │   ├── quiz.module.ts
@@ -251,6 +261,8 @@ src
 │       ├── user.module.ts
 │       ├── user.service.spec.ts
 │       └── user.service.ts
+├── utils
+│   └── clear-cookie.ts
 ├── app.controller.ts
 ├── app.module.ts
 └── main.ts
@@ -271,21 +283,38 @@ A bird's-eye view of how the client interacts with the API and how each module c
 ```mermaid
 graph TD
     Client["Client (HTTP)"]
-    Gateway["API Gateway / Main.ts"]
-    Auth["Auth Module"]
-    User["User Module"]
-    Quiz["Quiz Module"]
-    Mail["Mail Module"]
-    DB[("PostgreSQL")]
 
-    Client --> Gateway
+    subgraph NestJS["NestJS Server"]
+        Gateway["API Gateway · main.ts"]
+
+        subgraph Modules["Modules"]
+            Auth["Auth\nRegister, login, OAuth"]
+            User["User\nProfile, account"]
+            Quiz["Quiz\nQuestions, answers"]
+            Mail["Mail\nOTP"]
+        end
+    end
+
+    subgraph Database["Database"]
+        PG[("PostgreSQL\nUsers, quizzes, answers")]
+    end
+
+    subgraph External["External Services"]
+        Google["Google OAuth"]
+        SMTP["SMTP Server"]
+    end
+
+    Client -->|"HTTPS"| Gateway
     Gateway --> Auth
     Gateway --> User
     Gateway --> Quiz
-    Auth --> Mail
-    Auth --> DB
-    User --> DB
-    Quiz --> DB
+
+    Auth -.->|"triggers"| Mail
+    Auth -->|"OAuth"| Google
+    Auth --> PG
+    User --> PG
+    Quiz --> PG
+    Mail -->|"SMTP"| SMTP
 ```
 
 ---
@@ -339,6 +368,8 @@ class AuthService {
 +logout()
 +generateTokens()
 +refreshTokens()
++generateOAuthCode()
++consumeOAuthCode()
 }
 class UserService {
 +createUser()
@@ -352,19 +383,22 @@ class UserService {
 +clearToken()
 +incrementAttempts()
 +verifyUser()
-
 }
 class QuizService {
 +getQuizzes()
-+getQuestionsByQuiz()
-+getAnswersByQuestion()
-+getPassedQuizzesNames()
-+getUserQuizAnswer()
-+getQuizProgress()
++getQuizWithQuestions()
++getQuestionsIds()
++getResult()
++getQuizUserProgress()
++getPassedQuizzesBadges()
 +startQuiz()
 +insertUserProgress()
++deleteUserAnswers()
 +pauseQuiz()
++getActivities()
 +getUserStats()
++getTopThree()
++getUserRank()
 +getLeaderboard()
 }
 class MailService {
@@ -389,12 +423,12 @@ graph TD
 
     subgraph Processes
         P1["1.0 Register / Login"]
-        P2["2.0 Manage Quizzes"]
-        P3["3.0 Track Progress"]
-        P4["4.0 Submit Answers"]
-        P5["5.0 Rank Leaderboard"]
-        P6["6.0 Delete Account"]
-
+        P2["2.0 OAuth"]
+        P3["3.0 Manage Quizzes"]
+        P4["4.0 Track Progress"]
+        P5["5.0 Submit Answers"]
+        P6["6.0 Rank Leaderboard"]
+        P7["7.0 Delete Account"]
     end
 
     subgraph Database
@@ -411,33 +445,44 @@ graph TD
     U -->|"credentials"| P1
     P1 -->|"check deleted"| DS3
     P1 -->|"store user"| DS1
+    P1 -->|"store OTP / refresh token"| DS2
     P1 -->|"JWT token"| U
 
-    U -->|"request quizzes"| P2
-    P2 -->|"fetch quizzes"| DS4
-    DS4 -->|"quiz data"| P2
-    P2 -->|"quiz list"| U
+    U --->|"authorize"| P2
+    P2 -->|"store oauth code"| DS2
+    P2 --->|"redirect with code"| U
+    U --->|"send code"| P2
+    P2 --->|"validate code"| DS2
+    P2 --->|"generate tokens"| U
 
-    U -->|"start / pause quiz"| P3
-    P3 -->|"read / write progress"| DS7
-    DS7 -->|"progress state"| P3
-    P3 -->|"progress state"| U
+    U -->|"request quizzes"| P3
+    P3 -->|"fetch quizzes"| DS4
+    P3 -->|"fetch questions & answers"| DS5
+    DS5 -->|"question data"| P3
+    DS4 -->|"quiz data"| P3
+    P3 -->|"quiz list"| U
 
-    U -->|"selected answer"| P4
-    P4 -->|"validate answer"| DS6
-    P4 -->|"store answer"| DS8
-    DS8 -->|"score result"| P4
-    P4 -->|"score result"| U
+    U -->|"start / pause quiz"| P4
+    P4 -->|"validate question"| DS5
+    P4 -->|"read / write progress"| DS7
+    DS7 -->|"progress state"| P4
+    P4 -->|"progress state"| U
 
-    U -->|"request leaderboard"| P5
-    P5 -->|"aggregate scores"| DS7
-    P5 -->|"ranked results"| U
+    U -->|"selected answer"| P5
+    P5 -->|"validate question"| DS5
+    P5 -->|"validate answer"| DS6
+    P5 -->|"store answer"| DS8
+    DS8 -->|"score result"| P5
+    P5 -->|"score result"| U
 
-    U -->|"delete request"| P6
-    P6 -->|"delete user"| DS1
-    P6 -->|"revoke tokens"| DS2
-    P6 -->|"store email"| DS3
-    P6 -->|"confirmed"| U
+    U -->|"request leaderboard"| P6
+    P6 -->|"aggregate scores"| DS7
+    P6 -->|"ranked results"| U
+
+    U -->|"delete request"| P7
+    P7 -->|"delete user"| DS1
+    P7 -->|"store email"| DS3
+    P7 -->|"confirmed"| U
 ```
 
 ---
@@ -454,7 +499,7 @@ erDiagram
     string email
     string password
     string googleId
-    string providers
+    simple-array providers
     boolean isEmailVerified
   }
   tokens {
@@ -477,6 +522,7 @@ erDiagram
     string title
     text description
     int timeInSeconds
+    string badgeTitle
   }
   questions {
     uuid id PK
@@ -495,11 +541,12 @@ erDiagram
     uuid id PK
     uuid userId FK
     uuid quizId FK
-    uuid pausedAtQuestionId FK
+    int pausedAtQuestionIndex
     enum status
     numeric score
     boolean passed
     int remainingTimeSeconds
+    int progress
     date attemptAt
     date completedAt
   }
@@ -521,14 +568,13 @@ erDiagram
   quizzes ||--o{ user_quiz_answers : "answered in"
   questions ||--o{ user_quiz_answers : "answered as"
   answers ||--o{ user_quiz_answers : "selected as"
-  questions ||--o| user_quiz_progress : "paused at"
 ```
 
 ---
 
-## License
+## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+MIT License
 
 ---
 

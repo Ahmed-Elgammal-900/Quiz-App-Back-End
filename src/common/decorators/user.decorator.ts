@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { UserResponse } from 'src/modules/auth/types/response-types';
+import { UserResponse } from '@/modules/auth/types/response-types';
 
 export const CurrentUser = createParamDecorator(
   (data: keyof UserResponse, ctx: ExecutionContext) => {

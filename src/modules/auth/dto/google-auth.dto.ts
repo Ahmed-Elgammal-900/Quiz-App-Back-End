@@ -8,7 +8,7 @@ export class GoogleDto {
   })
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Email address from Google account',
@@ -16,7 +16,7 @@ export class GoogleDto {
   })
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'Unique Google account identifier',
@@ -24,5 +24,5 @@ export class GoogleDto {
   })
   @IsNotEmpty()
   @IsString()
-  googleId: string;
+  googleId!: string;
 }

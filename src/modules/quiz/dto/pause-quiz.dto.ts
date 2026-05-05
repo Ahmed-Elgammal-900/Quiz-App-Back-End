@@ -1,14 +1,16 @@
-import { IsInt, Min, IsUUID, IsNotEmpty } from 'class-validator';
+import { IsInt, Min, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class PauseQuizDto {
   @ApiProperty({
-    description: 'UUID of the question the user paused on',
-    example: 'a3bb189e-8bf9-3888-9912-ace4e6543002',
+    description: 'Index of the question the user paused on',
+    example: 3,
+    required: false,
   })
-  @IsUUID()
-  @IsNotEmpty()
-  pausedAtQuestionId: string;
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  pausedAtQuestionIndex?: number;
 
   @ApiProperty({
     description: 'Remaining time in seconds when the quiz was paused',
@@ -18,5 +20,5 @@ export class PauseQuizDto {
   @IsInt()
   @Min(0)
   @IsNotEmpty()
-  remainingTimeSeconds: number;
+  remainingTimeSeconds!: number;
 }

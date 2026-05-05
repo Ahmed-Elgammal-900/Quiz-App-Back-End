@@ -16,6 +16,7 @@ describe('AuthController (e2e)', () => {
     name: 'Test User',
     email: 'auth-test@email.com',
     password: 'Tyfj8f2@d1hjdf',
+    confirmPassword: 'Tyfj8f2@d1hjdf',
   };
 
   beforeAll(async () => {
@@ -35,15 +36,14 @@ describe('AuthController (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
     app.use(cookieParser());
     await app.init();
+  }, 30000);
 
+  afterAll(async () => {
     const authService = module.get(AuthService);
     await authService.deleteTestUser(TEST_USER.email);
     await authService.deleteTestUser(TEST_USER.email, true);
-  });
-
-  afterAll(async () => {
     await app.close();
-  });
+  }, 30000);
 
   describe('POST /auth/signup', () => {
     it('should register a new user', async () => {
@@ -151,6 +151,7 @@ describe('AuthController (e2e)', () => {
   describe('POST /auth/login — verified', () => {
     beforeAll(async () => {
       const authService = module.get(AuthService);
+      // userId is guaranteed to be set by the signup test above
       await authService.forceVerifyUser(userId);
     });
 
@@ -191,12 +192,85 @@ describe('AuthController (e2e)', () => {
       const res = await request(app.getHttpServer()).post(
         '/auth/refresh-token',
       );
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('GET /auth/exchange', () => {
+    it('should exchange OAuth code for tokens', async () => {
+      const authService = module.get(AuthService);
+      const code = await authService.generateOAuthCode(userId);
+
+      const res = await request(app.getHttpServer())
+        .get('/auth/exchange')
+        .query({ code });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty('success', true);
+      expect(res.headers['set-cookie']).toBeDefined();
+    });
+
+    it('should fail with invalid code', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/auth/exchange')
+        .query({ code: 'invalid-code' });
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should fail with missing code', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/auth/exchange')
+        .query({});
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should fail on second use — code is single-use', async () => {
+      const authService = module.get(AuthService);
+      const code = await authService.generateOAuthCode(userId);
+
+      await request(app.getHttpServer()).get('/auth/exchange').query({ code });
+
+      const res = await request(app.getHttpServer())
+        .get('/auth/exchange')
+        .query({ code });
 
       expect(res.status).toBe(401);
     });
   });
 
+  describe('POST /auth/verify-access-token', () => {
+    it('should return success for valid token', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/verify-access-token')
+        .set('Cookie', cookies);
+
+      expect(res.status).toBe(201);
+      expect(res.body.data).toHaveProperty('success', true);
+    });
+
+    it('should fail without token', async () => {
+      const res = await request(app.getHttpServer()).post(
+        '/auth/verify-access-token',
+      );
+      expect(res.status).toBe(401);
+    });
+  });
+
   describe('PATCH /auth/change-password', () => {
+    it('should fail without auth', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/auth/change-password')
+        .send({
+          currentPassword: TEST_USER.password,
+          newPassword: 'NewPass123!@#',
+          confirmPassword: 'NewPass123!@#',
+        });
+
+      expect(res.status).toBe(401);
+    });
+
     it('should fail with wrong current password', async () => {
       const res = await request(app.getHttpServer())
         .patch('/auth/change-password')
@@ -204,6 +278,7 @@ describe('AuthController (e2e)', () => {
         .send({
           currentPassword: 'wrongpassword',
           newPassword: 'NewPass123!',
+          confirmPassword: 'NewPass123!',
         });
 
       expect(res.status).toBe(400);
@@ -216,6 +291,7 @@ describe('AuthController (e2e)', () => {
         .send({
           currentPassword: TEST_USER.password,
           newPassword: TEST_USER.password,
+          confirmPassword: TEST_USER.password,
         });
 
       expect(res.status).toBe(400);
@@ -236,17 +312,6 @@ describe('AuthController (e2e)', () => {
         'message',
         'password changed successfully',
       );
-    });
-
-    it('should fail without auth', async () => {
-      const res = await request(app.getHttpServer())
-        .patch('/auth/change-password')
-        .send({
-          currentPassword: TEST_USER.password,
-          newPassword: 'NewPass123!@#',
-        });
-
-      expect(res.status).toBe(401);
     });
   });
 
@@ -287,7 +352,6 @@ describe('AuthController (e2e)', () => {
   describe('POST /auth/logout', () => {
     it('should fail without auth', async () => {
       const res = await request(app.getHttpServer()).post('/auth/logout');
-
       expect(res.status).toBe(401);
     });
 
@@ -299,13 +363,14 @@ describe('AuthController (e2e)', () => {
       expect(res.status).toBe(201);
       expect(res.body.data).toHaveProperty('message', 'logout success');
 
-      cookies = res.headers['set-cookie'];
       const clearedCookies = res.headers['set-cookie'];
       const cookieArray = Array.isArray(clearedCookies)
         ? clearedCookies
         : [clearedCookies];
       expect(cookieArray.some((c) => c.includes('access_token=;'))).toBe(true);
       expect(cookieArray.some((c) => c.includes('refresh_token=;'))).toBe(true);
+
+      cookies = cookieArray.join('; ');
     });
 
     it('should fail after logout', async () => {

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
 import { Database } from './config/db-connectiont';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { MailModule } from './modules/mail/mail.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { UserModule } from './modules/user/user.module';
@@ -27,8 +27,9 @@ import { AppController } from './app.controller';
     UserModule,
     QuizModule,
   ],
-  controllers:[AppController],
+  controllers: [AppController],
   providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

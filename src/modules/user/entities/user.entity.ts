@@ -7,39 +7,39 @@ import { UserQuizAnswer } from '../../quiz/entities/user-quiz-answer.entity';
 @Entity()
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column({ unique: true })
-  email: string;
+  email!: string;
 
-  @Column({ nullable: true })
-  password: string;
+  @Column({ nullable: true, type: 'text' })
+  password!: string | null;
 
-  @Column({ nullable: true })
-  googleId: string;
+  @Column({ nullable: true, type: 'text' })
+  googleId!: string | null;
 
   @Column({
     type: 'simple-array',
     default: Provider.LOCAL,
   })
-  providers: Provider[];
+  providers!: Provider[];
 
   @Column({ default: false })
-  isEmailVerified: boolean;
+  isEmailVerified!: boolean;
 
   @OneToMany(() => Token, (token) => token.user)
-  tokens: Token[];
+  tokens!: Token[];
 
   @OneToMany(() => UserQuizProgress, (progress) => progress.user, {
     cascade: true,
   })
-  quizProgresses: UserQuizProgress[];
+  quizProgresses!: UserQuizProgress[];
 
   @OneToMany(() => UserQuizAnswer, (answer) => answer.user, {
     cascade: true,
   })
-  quizAnswers: UserQuizAnswer[];
+  quizAnswers!: UserQuizAnswer[];
 }

@@ -14,31 +14,31 @@ import { TokenType } from '../../auth/constants/token-type.constant';
 @Index(['userId', 'type'], { unique: true })
 export class Token {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @Column()
+  @Column({ type: 'text' })
   @Index()
-  token: string;
+  token!: string;
 
   @Column({ type: 'enum', enum: TokenType })
-  type: TokenType;
+  type!: TokenType;
 
-  @Column()
-  expiresAt: Date;
+  @Column({ type: 'timestamptz' })
+  expiresAt!: Date;
 
-  @Column({ default: 0 })
-  attempts: number;
+  @Column({ type: 'int', default: 0 })
+  attempts!: number;
 
-  @Column({ nullable: true })
-  lastSentAt: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  lastSentAt!: Date | null;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt!: Date;
 
   @ManyToOne(() => User, (user) => user.tokens, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user!: User;
 
-  @Column()
-  userId: string;
+  @Column({ type: 'uuid' })
+  userId!: string;
 }

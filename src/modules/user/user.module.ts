@@ -5,6 +5,7 @@ import { User } from '../user/entities/user.entity';
 import { DeletedUser } from '../user/entities/deletedUser.entity';
 import { Token } from './entities/token.entity';
 import { UserController } from './user.controller';
+
 @Module({
   imports: [TypeOrmModule.forFeature([User, DeletedUser, Token])],
   controllers: [UserController],

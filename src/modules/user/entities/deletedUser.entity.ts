@@ -8,11 +8,11 @@ import {
 @Entity()
 export class DeletedUser {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ nullable: false, unique: true })
-  email: string;
+  email!: string;
 
   @CreateDateColumn()
-  deletedAt: Date;
+  deletedAt!: Date;
 }

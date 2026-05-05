@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CreateAuthDto } from './dto/signup.dto';
 import * as bcrypt from 'bcrypt';
@@ -22,8 +23,8 @@ import {
   REFRESH_TOKEN_TIME,
 } from './constants/auth.constants';
 import { TokenType } from './constants/token-type.constant';
-import { UnauthorizedException } from '@nestjs/common';
 import { UserResponse } from './types/response-types';
+import { Provider } from '../user/constants/provider.constant';
 
 @Injectable()
 export class AuthService {
@@ -63,10 +64,6 @@ export class AuthService {
 
     const user = await this.userService.findOrCreateGoogleUser(googleDto);
 
-    if (!user.isEmailVerified) {
-      await this.sendOtp(user.id, user.email, user.name, true);
-    }
-
     return {
       id: user.id,
       email: user.email,
@@ -96,7 +93,7 @@ export class AuthService {
       throw new BadRequestException('Invalid email or password');
     }
 
-    const truePassword = await bcrypt.compare(password, user.password);
+    const truePassword = await bcrypt.compare(password, user.password ?? '');
 
     if (!truePassword) {
       throw new BadRequestException('Invalid email or password');
@@ -139,6 +136,9 @@ export class AuthService {
       throw new BadRequestException('Reset token has expired');
     }
 
+    const user = await this.userService.findOne({ id: resetToken.userId });
+    if (!user) throw new NotFoundException('User not found');
+
     const hashedPassword = await bcrypt.hash(newPassword, HASH_SALT_ROUNDS);
     await this.userService.updateUser(resetToken.userId, {
       password: hashedPassword,
@@ -149,10 +149,12 @@ export class AuthService {
       resetToken.userId,
     );
 
-    const user = await this.userService.findOne({ id: resetToken.userId });
-
-    if (!user) {
-      throw new NotFoundException('user not found');
+    if (!user.providers.includes(Provider.LOCAL)) {
+      const providers = [...user.providers, Provider.LOCAL];
+      user.providers = providers;
+      await this.userService.updateUser(user.id, {
+        providers,
+      });
     }
 
     if (!user.isEmailVerified) {
@@ -164,29 +166,36 @@ export class AuthService {
 
   /**
    * Changes the password for an authenticated user.
-   * Validates the current password and ensures the new one is different.
+   * For local accounts, validates the current password and ensures the new one is different.
+   * For OAuth accounts, allows setting/changing password without current password verification.
    *
    * @param id - The ID of the user changing their password
-   * @param updatePasswordDto - Contains currentPassword and newPassword
+   * @param updatePasswordDto - Contains optional currentPassword, newPassword, and confirmPassword
    * @throws {NotFoundException} If the user is not found
-   * @throws {BadRequestException} If current password is wrong or new password matches the old one
+   * @throws {BadRequestException} If current password is missing or incorrect (local accounts only),
+   * or if the new password matches the existing one
    */
   async changePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
     const user = await this.userService.findOne({ id });
     if (!user) throw new NotFoundException('User not found');
+    if (user.providers.includes(Provider.LOCAL) && user.password) {
+      if (!updatePasswordDto.currentPassword) {
+        throw new BadRequestException('current password required');
+      }
+      const isMatch = await bcrypt.compare(
+        updatePasswordDto.currentPassword,
+        user.password,
+      );
+      if (!isMatch)
+        throw new BadRequestException('Current password is incorrect');
 
-    const isMatch = await bcrypt.compare(
-      updatePasswordDto.currentPassword,
-      user.password,
-    );
-    if (!isMatch)
-      throw new BadRequestException('Current password is incorrect');
-
-    const isSame = await bcrypt.compare(
-      updatePasswordDto.newPassword,
-      user.password,
-    );
-    if (isSame) throw new BadRequestException('New password must be different');
+      const isSame = await bcrypt.compare(
+        updatePasswordDto.newPassword,
+        user.password,
+      );
+      if (isSame)
+        throw new BadRequestException('New password must be different');
+    }
 
     const hashedPassword = await bcrypt.hash(
       updatePasswordDto.newPassword,
@@ -367,6 +376,51 @@ export class AuthService {
     }
 
     return { message: 'If email exists, reset link has been sent' };
+  }
+
+  async generateOAuthCode(userId: string) {
+    const OAuthCode = crypto.randomBytes(32).toString('hex');
+    const hashedCode = crypto
+      .createHash('sha256')
+      .update(OAuthCode)
+      .digest('hex');
+
+    await this.userService.saveToken(
+      userId,
+      hashedCode,
+      TokenType.OAUTH_CODE,
+      new Date(Date.now() + 60 * 1000),
+    );
+
+    return OAuthCode;
+  }
+
+  async consumeOAuthCode(code: string) {
+    const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
+
+    const token = await this.userService.getToken(
+      TokenType.OAUTH_CODE,
+      undefined,
+      hashedCode,
+    );
+
+    if (!token || token.expiresAt < new Date()) {
+      if (token) {
+        await this.userService.clearToken(TokenType.OAUTH_CODE, token.userId);
+      }
+      throw new UnauthorizedException('Invalid or expired code');
+    }
+
+    await this.userService.clearToken(TokenType.OAUTH_CODE, token.userId);
+    const user = await this.userService.findOne({ id: token.userId });
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+    return {
+      id: user.id,
+      email: user.email,
+      isEmailVerified: user.isEmailVerified,
+    };
   }
 
   /**

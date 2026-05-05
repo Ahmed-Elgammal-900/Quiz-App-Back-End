@@ -9,7 +9,7 @@ export class VerifyOtpDto {
   @IsString()
   @IsNotEmpty()
   @IsUUID()
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: 'The 6-digit OTP sent to the user email',
@@ -20,5 +20,5 @@ export class VerifyOtpDto {
   @IsString()
   @IsNotEmpty()
   @Length(6, 6)
-  otp: string;
+  otp!: string;
 }

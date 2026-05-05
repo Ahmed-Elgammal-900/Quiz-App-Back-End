@@ -16,7 +16,7 @@ import { UserQuizAnswer } from '../modules/quiz/entities/user-quiz-answer.entity
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
+        type: 'postgres' as const,
         url: configService.get<string>('DATABASE_URL'),
         entities: [
           User,
@@ -28,7 +28,7 @@ import { UserQuizAnswer } from '../modules/quiz/entities/user-quiz-answer.entity
           UserQuizProgress,
           UserQuizAnswer,
         ],
-        synchronize: false,
+        synchronize: true,
         ssl: {
           rejectUnauthorized: false,
         },

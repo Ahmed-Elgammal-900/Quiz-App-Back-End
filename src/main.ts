@@ -19,16 +19,18 @@ async function bootstrap() {
   if (!frontEndOriginRaw) {
     throw new Error('FRONT_END_ORIGIN is required');
   }
-  let frontEndOrigin: string;
+
+  let parsed: URL;
   try {
-    const parsed = new URL(frontEndOriginRaw);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      throw new Error();
-    }
-    frontEndOrigin = parsed.origin;
+    parsed = new URL(frontEndOriginRaw);
   } catch {
     throw new Error('FRONT_END_ORIGIN must be a valid absolute http(s) URL');
   }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error('FRONT_END_ORIGIN must use http or https protocol');
+  }
+  const frontEndOrigin = parsed.origin;
 
   const isProduction = process.env.NODE_ENV === 'production';
   // app init
@@ -52,19 +54,17 @@ async function bootstrap() {
   );
 
   app.use(cookieParser());
-  // Swagger Config - enabled only in non-production environments
-  if (process.env.NODE_ENV !== 'production') {
-    const config = new DocumentBuilder()
-      .setTitle('Quizzer API')
-      .setDescription('The Quizzer API documentation')
-      .setVersion('1.0')
-      .addCookieAuth('access_token')
-      .build();
 
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('docs', app, document);
-  }
-  //
+  const config = new DocumentBuilder()
+    .setTitle('Quizzer API')
+    .setDescription('The Quizzer API documentation')
+    .setVersion('1.0')
+    .addCookieAuth('access_token')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('docs', app, document);
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

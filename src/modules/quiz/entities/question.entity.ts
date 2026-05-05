@@ -9,32 +9,36 @@ import {
 } from 'typeorm';
 import { Quiz } from './quiz.entity';
 import { Answer } from './answer.entity';
+import { UserQuizAnswer } from './user-quiz-answer.entity';
 
 @Entity('questions')
 @Index(['quizId'])
 export class Question {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid' })
-  quizId: string;
+  quizId!: string;
 
   @Column({ type: 'text' })
-  text: string;
+  text!: string;
 
   @Column({ type: 'int', default: 0 })
-  orderIndex: number;
+  orderIndex!: number;
 
   @ManyToOne(() => Quiz, (quiz) => quiz.questions, {
     onDelete: 'CASCADE',
     nullable: false,
   })
   @JoinColumn({ name: 'quizId' })
-  quiz: Quiz;
+  quiz!: Quiz;
 
   @OneToMany(() => Answer, (answer) => answer.question, {
     cascade: true,
     eager: false,
   })
-  answers: Answer[];
+  answers!: Answer[];
+
+  @OneToMany(() => UserQuizAnswer, (userAnswer) => userAnswer.question)
+  userQuizAnswers!: UserQuizAnswer[];
 }

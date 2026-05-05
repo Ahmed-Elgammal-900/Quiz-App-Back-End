@@ -7,6 +7,7 @@ import { Question } from './entities/question.entity';
 import { Answer } from './entities/answer.entity';
 import { UserQuizAnswer } from './entities/user-quiz-answer.entity';
 import { UserQuizProgress } from './entities/user-progress.entity';
+import { User } from '../user/entities/user.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UserQuizProgress } from './entities/user-progress.entity';
       Answer,
       UserQuizAnswer,
       UserQuizProgress,
+      User,
     ]),
   ],
   controllers: [QuizController],
