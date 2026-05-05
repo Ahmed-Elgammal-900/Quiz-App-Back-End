@@ -591,6 +591,10 @@ describe('AuthService', () => {
         password: null,
         providers: [Provider.GOOGLE],
       });
+
+      (bcrypt.compare as jest.Mock)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
       (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
 
       await service.changePassword('user-123', {
@@ -613,6 +617,7 @@ describe('AuthService', () => {
       (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed');
 
       await service.changePassword('user-123', {
+        currentPassword: 'hashed',
         newPassword: 'new',
         confirmPassword: 'new',
       });
@@ -620,7 +625,7 @@ describe('AuthService', () => {
       expect(mockUserService.updateUser).toHaveBeenCalledWith('user-123', {
         password: 'new-hashed',
       });
-      expect(bcrypt.compare).not.toHaveBeenCalled();
+      expect(bcrypt.compare).toHaveBeenCalled();
     });
   });
 

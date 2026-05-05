@@ -15,10 +15,10 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'text' })
   password!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'text' })
   googleId!: string | null;
 
   @Column({
