@@ -55,15 +55,17 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  const config = new DocumentBuilder()
-    .setTitle('Quizzer API')
-    .setDescription('The Quizzer API documentation')
-    .setVersion('1.0')
-    .addCookieAuth('access_token')
-    .build();
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Quizzer API')
+      .setDescription('The Quizzer API documentation')
+      .setVersion('1.0')
+      .addCookieAuth('access_token')
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+  }
 
   await app.listen(process.env.PORT ?? 3000);
 }
