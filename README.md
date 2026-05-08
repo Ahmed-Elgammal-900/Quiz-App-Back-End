@@ -125,6 +125,12 @@ you will find docs on `http://localhost:3000/docs` (or the port defined in your 
 
 ---
 
+## 📱 Front-End Integration
+
+To see the API in action, check out the front-end integration here → [Front-End Repo](https://github.com/Ahmed-Elgammal-900/Quiz-App-Front-End)
+
+---
+
 ## API Endpoints
 
 ### Auth — `/auth`
