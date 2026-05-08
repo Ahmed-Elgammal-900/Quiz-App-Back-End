@@ -36,6 +36,7 @@ import {
 } from './constants/auth.constants';
 import { ExchangeQueryDto } from './dto/exchange-query.dto';
 import { clearTokenCookies } from '../../utils/clear-cookie';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -455,6 +456,7 @@ export class AuthController {
    * @route POST /auth/verify-access-token
    * @returns `{ success: true }` if the token is valid
    */
+  @SkipThrottle()
   @Post('verify-access-token')
   @ApiOperation({ summary: 'Verify access token' })
   @ApiCookieAuth('access_token')

@@ -27,6 +27,7 @@ import { PaginationDto } from './dto/pagination.dto';
 import { InsertProgressDto } from './dto/insert-progress.dto';
 import { PauseQuizDto } from './dto/pause-quiz.dto';
 import { QuizProgressStatus } from './constants/quiz-progress-status';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Quizzes')
 @ApiCookieAuth('access_token')
@@ -354,6 +355,7 @@ export class QuizController {
    * Marks the quiz as completed if this is the last question.
    * Clears all stored answers if the user passed.
    */
+  @SkipThrottle()
   @Post(':quizId/progress')
   @ApiOperation({
     summary: 'Save answer and update progress',
