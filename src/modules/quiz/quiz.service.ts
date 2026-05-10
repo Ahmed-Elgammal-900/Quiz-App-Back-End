@@ -462,10 +462,8 @@ export class QuizService {
     if (!progress) throw new NotFoundException('progress not found');
 
     if (progress.status === QuizProgressStatus.COMPLETED) {
-      await this.userQuizProgressRepo.upsert(
-        { userId, quizId, remainingTimeSeconds: 0 },
-        ['userId', 'quizId'],
-      );
+      progress.remainingTimeSeconds = 0;
+      await this.userQuizProgressRepo.save(progress);
     }
 
     if (
