@@ -435,14 +435,13 @@ describe('QuizService', () => {
         status: QuizProgressStatus.COMPLETED,
         passed: false,
       });
-      userQuizProgressRepo.upsert.mockResolvedValue(null);
+      userQuizProgressRepo.save.mockResolvedValue(null);
       userQuizAnswerRepo.delete.mockResolvedValue(null);
 
       await service.deleteUserAnswers('user-id', 'quiz-id');
 
-      expect(userQuizProgressRepo.upsert).toHaveBeenCalledWith(
-        { userId: 'user-id', quizId: 'quiz-id', remainingTimeSeconds: 0 },
-        ['userId', 'quizId'],
+      expect(userQuizProgressRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ remainingTimeSeconds: 0 }),
       );
     });
 

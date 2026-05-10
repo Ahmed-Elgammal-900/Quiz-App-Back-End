@@ -358,7 +358,6 @@ describe('UserService', () => {
         },
         {
           conflictPaths: ['userId', 'type'],
-          skipUpdateIfNoValuesChanged: true,
         },
       );
     });

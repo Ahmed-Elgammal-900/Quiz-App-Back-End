@@ -176,7 +176,6 @@ export class UserService {
       },
       {
         conflictPaths: ['userId', 'type'],
-        skipUpdateIfNoValuesChanged: true,
       },
     );
   }
