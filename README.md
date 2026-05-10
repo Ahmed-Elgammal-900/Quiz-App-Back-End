@@ -160,23 +160,23 @@ To see the API in action, check out the front-end integration here → [Front-En
 
 ### Quizzes — `/quizzes`
 
-| Method | Endpoint                       | Description                                                                                                    | Auth Required |
-| ------ | ------------------------------ | -------------------------------------------------------------------------------------------------------------- | ------------- |
-| GET    | `/`                            | Get all quizzes with their progress status for the authenticated user.                                         | ✅            |
-| GET    | `/activities`                  | Get all quizzes currently in progress or paused, sorted by most recent attempt.                                | ✅            |
-| GET    | `/stats`                       | Get aggregate stats for the authenticated user: total quizzes, passed quizzes, average score, and total score. | ✅            |
-| GET    | `/top-three`                   | Get the top 3 users ranked by passed quizzes, total score, and average score.                                  | ✅            |
-| GET    | `/my-rank`                     | Get the authenticated user's current leaderboard rank and stats.                                               | ✅            |
-| GET    | `/leaderboard`                 | Get the paginated leaderboard ordered by passed quizzes, total score, and average score.                       | ✅            |
-| GET    | `/earned-badges`               | Get the names and IDs of all quizzes the authenticated user has passed.                                        | ✅            |
-| GET    | `/:quizId/get-result`          | Get the authenticated user's final result for a completed quiz.                                                | ✅            |
-| GET    | `/:quizId/questions`           | Get paginated questions with their answers for a specific quiz.                                                | ✅            |
-| GET    | `/:quizId/questions/ids`       | Get only the IDs of all questions belonging to a specific quiz.                                                | ✅            |
-| GET    | `/:quizId/progress`            | Get the authenticated user's progress records for a specific quiz.                                             | ✅            |
-| POST   | `/:quizId/start`               | Start or restart a quiz. If the user already passed, only updates `attemptAt`. Otherwise resets all progress.  | ✅            |
-| POST   | `/:quizId/pause`               | Pause a quiz session, saving the current question index and remaining time.                                    | ✅            |
-| POST   | `/:quizId/progress`            | Save the user's answer for a question and update quiz progress. Marks quiz as completed if last question.      | ✅            |
-| DELETE | `/:quizId/delete-user-answers` | Delete all submitted answers for the authenticated user on a specific quiz.                                    | ✅            |
+| Method | Endpoint                       | Description                                                                                                                                                         | Auth Required |
+| ------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| GET    | `/`                            | Get all quizzes with their progress status for the authenticated user.                                                                                              | ✅            |
+| GET    | `/activities`                  | Get all quizzes currently in progress or paused, sorted by most recent attempt.                                                                                     | ✅            |
+| GET    | `/stats`                       | Get aggregate stats for the authenticated user: total quizzes, passed quizzes, average score, and total score.                                                      | ✅            |
+| GET    | `/top-three`                   | Get the top 3 users ranked by passed quizzes, total score, and average score.                                                                                       | ✅            |
+| GET    | `/my-rank`                     | Get the authenticated user's current leaderboard rank and stats.                                                                                                    | ✅            |
+| GET    | `/leaderboard`                 | Get the paginated leaderboard ordered by passed quizzes, total score, and average score.                                                                            | ✅            |
+| GET    | `/earned-badges`               | Get the names and IDs of all quizzes the authenticated user has passed.                                                                                             | ✅            |
+| GET    | `/:quizId/get-result`          | Get the authenticated user's final result for a completed quiz.                                                                                                     | ✅            |
+| GET    | `/:quizId/questions`           | Get paginated questions with their answers for a specific quiz.                                                                                                     | ✅            |
+| GET    | `/:quizId/questions/ids`       | Get only the IDs of all questions belonging to a specific quiz.                                                                                                     | ✅            |
+| GET    | `/:quizId/progress`            | Get the authenticated user's progress records for a specific quiz.                                                                                                  | ✅            |
+| POST   | `/:quizId/start`               | Start or restart a quiz. If the user already passed, only updates `attemptAt`. Otherwise resets all progress.                                                       | ✅            |
+| POST   | `/:quizId/pause`               | Pause a quiz session, saving the current question index and remaining time.                                                                                         | ✅            |
+| POST   | `/:quizId/progress`            | Saves the user's answer for a question and updates quiz progress. Marks the quiz as completed and records the remaining time in seconds if it is the last question. | ✅            |
+| DELETE | `/:quizId/delete-user-answers` | Deletes all submitted answers for the authenticated user on a specific quiz and resets the remaining time to 0 if the quiz was completed.                           | ✅            |
 
 > 📌 All protected routes require an `cookies token` .
 
