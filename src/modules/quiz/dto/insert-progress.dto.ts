@@ -1,4 +1,4 @@
-import { IsUUID, IsNotEmpty } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class InsertProgressDto {
@@ -17,4 +17,15 @@ export class InsertProgressDto {
   @IsUUID()
   @IsNotEmpty()
   selectedAnswerId!: string;
+
+  @ApiProperty({
+    description: 'Remaining time in seconds when the last answer was submitted',
+    example: 45,
+    required: false,
+    nullable: true,
+    type: Number,
+  })
+  @IsOptional()
+  @IsNumber()
+  remainingTimeInSeconds?: number;
 }

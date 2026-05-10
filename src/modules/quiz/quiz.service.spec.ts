@@ -145,7 +145,13 @@ describe('QuizService', () => {
       questionRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.insertUserProgress('user-id', 'quiz-id', 'q-id', 'a-id'),
+        service.insertUserProgress(
+          'user-id',
+          'quiz-id',
+          'q-id',
+          'a-id',
+          undefined,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -161,7 +167,13 @@ describe('QuizService', () => {
       answerRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.insertUserProgress('user-id', 'quiz-id', 'q-id', 'a-id'),
+        service.insertUserProgress(
+          'user-id',
+          'quiz-id',
+          'q-id',
+          'a-id',
+          undefined,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -175,7 +187,13 @@ describe('QuizService', () => {
       answerRepo.findOne.mockResolvedValue({ isCorrect: true });
 
       await expect(
-        service.insertUserProgress('user-id', 'quiz-id', 'q-id', 'a-id'),
+        service.insertUserProgress(
+          'user-id',
+          'quiz-id',
+          'q-id',
+          'a-id',
+          undefined,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -203,6 +221,7 @@ describe('QuizService', () => {
         'quiz-id',
         'q-id',
         'a-id',
+        undefined,
       );
 
       expect(result.score).toBe(40);
@@ -212,7 +231,7 @@ describe('QuizService', () => {
       expect(result.totalQuestions).toBe(10);
     });
 
-    it('should mark as COMPLETED and passed when last question is correct', async () => {
+    it('should mark as COMPLETED and passed when all questions are correct', async () => {
       userQuizProgressRepo.findOne.mockResolvedValue({
         status: QuizProgressStatus.IN_PROGRESS,
       });
@@ -235,6 +254,7 @@ describe('QuizService', () => {
         'quiz-id',
         'q-id',
         'a-id',
+        undefined,
       );
 
       expect(result.passed).toBe(true);
@@ -246,6 +266,7 @@ describe('QuizService', () => {
           status: QuizProgressStatus.COMPLETED,
           passed: true,
           completedAt: expect.any(Date),
+          remainingTimeSeconds: undefined,
         }),
         ['userId', 'quizId'],
       );
@@ -274,6 +295,7 @@ describe('QuizService', () => {
         'quiz-id',
         'q-id',
         'a-id',
+        undefined,
       );
 
       expect(result.passed).toBe(false);
@@ -281,7 +303,78 @@ describe('QuizService', () => {
       expect(result.score).toBe(90);
 
       expect(userQuizProgressRepo.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({ status: QuizProgressStatus.COMPLETED }),
+        expect.objectContaining({
+          status: QuizProgressStatus.COMPLETED,
+          remainingTimeSeconds: undefined,
+        }),
+        ['userId', 'quizId'],
+      );
+    });
+
+    it('should persist remainingTimeSeconds on last question', async () => {
+      userQuizProgressRepo.findOne.mockResolvedValue({
+        status: QuizProgressStatus.IN_PROGRESS,
+      });
+      questionRepo.findOne.mockResolvedValue({
+        id: 'q-id',
+        quizId: 'quiz-id',
+        orderIndex: 10,
+      });
+      answerRepo.findOne.mockResolvedValue({ isCorrect: true });
+      userQuizAnswerRepo.upsert.mockResolvedValue(null);
+      userQuizProgressRepo.upsert.mockResolvedValue(null);
+
+      questionRepo.count.mockResolvedValue(10);
+      userQuizAnswerRepo.count
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(10);
+
+      await service.insertUserProgress(
+        'user-id',
+        'quiz-id',
+        'q-id',
+        'a-id',
+        42,
+      );
+
+      expect(userQuizProgressRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          remainingTimeSeconds: 42,
+        }),
+        ['userId', 'quizId'],
+      );
+    });
+
+    it('should set pausedAtQuestionIndex to orderIndex - 1 when not last question', async () => {
+      userQuizProgressRepo.findOne.mockResolvedValue({
+        status: QuizProgressStatus.IN_PROGRESS,
+      });
+      questionRepo.findOne.mockResolvedValue({
+        id: 'q-id',
+        quizId: 'quiz-id',
+        orderIndex: 3, // orderIndex 3 → pausedAtQuestionIndex should be 2
+      });
+      answerRepo.findOne.mockResolvedValue({ isCorrect: true });
+      userQuizAnswerRepo.upsert.mockResolvedValue(null);
+      userQuizProgressRepo.upsert.mockResolvedValue(null);
+
+      questionRepo.count.mockResolvedValue(10);
+      userQuizAnswerRepo.count
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(4);
+
+      await service.insertUserProgress(
+        'user-id',
+        'quiz-id',
+        'q-id',
+        'a-id',
+        undefined,
+      );
+
+      expect(userQuizProgressRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pausedAtQuestionIndex: 2,
+        }),
         ['userId', 'quizId'],
       );
     });
@@ -335,6 +428,34 @@ describe('QuizService', () => {
       await service.deleteUserAnswers('user-id', 'quiz-id');
 
       expect(userQuizAnswerRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('should reset remainingTimeSeconds to 0 when quiz is COMPLETED', async () => {
+      userQuizProgressRepo.findOne.mockResolvedValue({
+        status: QuizProgressStatus.COMPLETED,
+        passed: false,
+      });
+      userQuizProgressRepo.upsert.mockResolvedValue(null);
+      userQuizAnswerRepo.delete.mockResolvedValue(null);
+
+      await service.deleteUserAnswers('user-id', 'quiz-id');
+
+      expect(userQuizProgressRepo.upsert).toHaveBeenCalledWith(
+        { userId: 'user-id', quizId: 'quiz-id', remainingTimeSeconds: 0 },
+        ['userId', 'quizId'],
+      );
+    });
+
+    it('should not reset remainingTimeSeconds when quiz is TIMEOUT', async () => {
+      userQuizProgressRepo.findOne.mockResolvedValue({
+        status: QuizProgressStatus.TIMEOUT,
+        passed: false,
+      });
+      userQuizAnswerRepo.delete.mockResolvedValue(null);
+
+      await service.deleteUserAnswers('user-id', 'quiz-id');
+
+      expect(userQuizProgressRepo.upsert).not.toHaveBeenCalled();
     });
   });
 

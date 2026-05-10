@@ -149,12 +149,14 @@ describe('QuizController', () => {
     await controller.insertUserProgress('user-id', 'quiz-id', {
       questionId: 'q-id',
       selectedAnswerId: 'a-id',
+      remainingTimeInSeconds: 500,
     });
     expect(mockQuizService.insertUserProgress).toHaveBeenCalledWith(
       'user-id',
       'quiz-id',
       'q-id',
       'a-id',
+      500,
     );
   });
 

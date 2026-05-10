@@ -381,6 +381,7 @@ export class QuizController {
       quizId,
       body.questionId,
       body.selectedAnswerId,
+      body.remainingTimeInSeconds
     );
   }
 

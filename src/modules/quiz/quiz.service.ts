@@ -356,6 +356,7 @@ export class QuizService {
    * @param quizId - The UUID of the quiz
    * @param questionId - The UUID of the question being answered
    * @param selectedAnswerId - The UUID of the selected answer
+   * @param remainingTimeSeconds - The time user taken to complete quiz
    * @returns score, passed, correctAnswers, totalQuestions, answeredQuestions, isLastQuestion, answerIsCorrect
    * @throws NotFoundException if the question doesn't belong to this quiz or answer not found
    * @throws BadRequestException if the quiz is not currently IN_PROGRESS
@@ -366,6 +367,7 @@ export class QuizService {
     quizId: string,
     questionId: string,
     selectedAnswerId: string,
+    remainingTimeSeconds: number | undefined,
   ) {
     const progress = await this.userQuizProgressRepo.findOne({
       where: { userId, quizId },
@@ -427,8 +429,9 @@ export class QuizService {
           ? QuizProgressStatus.COMPLETED
           : QuizProgressStatus.IN_PROGRESS,
         completedAt: isLastQuestion ? new Date() : null,
-        pausedAtQuestionIndex: question.orderIndex - 1,
+        pausedAtQuestionIndex: isLastQuestion ? 0 : question.orderIndex - 1,
         progress: isLastQuestion ? null : userProgress,
+        ...(isLastQuestion ? { remainingTimeSeconds } : {}),
       },
       ['userId', 'quizId'],
     );
@@ -457,6 +460,13 @@ export class QuizService {
     });
 
     if (!progress) throw new NotFoundException('progress not found');
+
+    if (progress.status === QuizProgressStatus.COMPLETED) {
+      await this.userQuizProgressRepo.upsert(
+        { userId, quizId, remainingTimeSeconds: 0 },
+        ['userId', 'quizId'],
+      );
+    }
 
     if (
       (progress.status === QuizProgressStatus.COMPLETED ||
