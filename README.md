@@ -23,13 +23,13 @@
 
 ## Features
 
-- 🔐 **JWT Authentication** — Secure user registration, login, and protected routes via JSON Web Tokens stored in cookies
-- 📝 **Quiz Management** — Retrieve quizzes and questions with answers, and track user progress across the app
-- ✅ **Answer Submission & Scoring** — Submit answers and receive instant calculated scores
-- 🏆 **Leaderboard** — Ranked leaderboard tracking top-scoring users across the platform
-- 🛡️ **Guards** — NestJS Guards enforce access control on sensitive endpoints
-- 🧩 **Modular Architecture** — Clean separation of concerns using NestJS modules
-- 🔒 **Security Hardened** — Protection against CSRF, SQL injection, rate limiting, HTTP security headers, and CORS enforcement
+- 🔐 **JWT Authentication:** Secure user registration, login, and protected routes via JSON Web Tokens stored in cookies
+- 📝 **Quiz Management:** Retrieve quizzes and questions with answers, and track user progress across the app
+- ✅ **Answer Submission & Scoring:** Submit answers and receive instant calculated scores
+- 🏆 **Leaderboard:** Ranked leaderboard tracking top-scoring users across the platform
+- 🛡️ **Guards:** NestJS Guards enforce access control on sensitive endpoints
+- 🧩 **Modular Architecture:** Clean separation of concerns using NestJS modules
+- 🔒 **Security Hardened:** Protection against CSRF, SQL injection, rate limiting, HTTP security headers, and CORS enforcement
 
 ---
 
