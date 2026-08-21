@@ -634,7 +634,7 @@ export class QuizService {
    * @returns userId, name, totalScore, and rank position
    */
   async getUserRank(userId: string): Promise<UserRank> {
-    const subQuery = this.userRepo
+    const qb = this.userRepo
       .createQueryBuilder('user')
       .select('user.id', 'userId')
       .addSelect('user.name', 'name')
@@ -649,21 +649,17 @@ export class QuizService {
 
     const result = await this.userRepo.manager
       .createQueryBuilder()
-      .select([
-        'ranked."userId"   AS "userId"',
-        'ranked."name"     AS "name"',
-        'ranked."totalScore" AS "totalScore"',
-        'ranked."rank"     AS "rank"',
-      ])
-      .from(`(${subQuery.getQuery()})`, 'ranked')
+      .select('*')
+      .from(`(${qb.getQuery()})`, 'ranked')
       .where('ranked."userId" = :userId', { userId })
-      .setParameters(subQuery.getParameters())
-      .getRawOne<UserRank>();
+      .setParameters(qb.getParameters())
+      .getRawOne();
 
     return {
-      ...result,
-      totalScore: parseInt(result.totalScore),
-      rank: Number(result.rank),
+      userId: result?.userId,
+      rank: Number(result?.rank ?? 0),
+      name: result?.name,
+      totalScore: parseInt(result?.totalScore ?? 0),
     };
   }
 
