@@ -10,15 +10,8 @@ import { User } from '../user/entities/user.entity';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { QuizProgressStatus } from './constants/quiz-progress-status';
 
-const mockRepo = () => ({
-  find: jest.fn(),
-  findOne: jest.fn(),
-  count: jest.fn(),
-  save: jest.fn(),
-  update: jest.fn(),
-  delete: jest.fn(),
-  upsert: jest.fn(),
-  createQueryBuilder: jest.fn().mockReturnValue({
+const mockRepo = () => {
+  const qbMock = {
     select: jest.fn().mockReturnThis(),
     addSelect: jest.fn().mockReturnThis(),
     leftJoin: jest.fn().mockReturnThis(),
@@ -36,14 +29,32 @@ const mockRepo = () => ({
     limit: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
+    from: jest.fn().mockReturnThis(),
+    setParameters: jest.fn().mockReturnThis(),
+    getQuery: jest.fn().mockReturnValue(''),
+    getParameters: jest.fn().mockReturnValue({}),
     getOne: jest.fn(),
     getMany: jest.fn(),
     getCount: jest.fn(),
     getRawOne: jest.fn(),
     getRawMany: jest.fn(),
     getManyAndCount: jest.fn(),
-  }),
-});
+  };
+
+  return {
+    find: jest.fn(),
+    findOne: jest.fn(),
+    count: jest.fn(),
+    save: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    upsert: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue(qbMock),
+    manager: {
+      createQueryBuilder: jest.fn().mockReturnValue(qbMock),
+    },
+  };
+};
 
 describe('QuizService', () => {
   let service: QuizService;
